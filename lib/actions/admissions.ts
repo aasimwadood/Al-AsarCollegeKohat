@@ -158,6 +158,26 @@ export async function cancelAdmissionAction(formData: FormData): Promise<ActionR
   return {};
 }
 
+export async function setAdmissionIdentifiersAction(formData: FormData): Promise<ActionResult> {
+  await requireRole("admin", "department", "faculty", "focal_person_intermediate");
+
+  const admissionId = formData.get("admissionId");
+  if (typeof admissionId !== "string" || !admissionId) return { error: "Invalid admission" };
+  const admissionNumber = formData.get("admissionNumber");
+  const boardRegistrationNumber = formData.get("boardRegistrationNumber");
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_admission_identifiers", {
+    p_admission_id: admissionId,
+    p_admission_number: typeof admissionNumber === "string" ? admissionNumber : null,
+    p_board_registration_number: typeof boardRegistrationNumber === "string" ? boardRegistrationNumber : null,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard", "layout");
+  return {};
+}
+
 export type AdmissionDocumentRow = { id: string; label: string; uploadedAt: string; url: string | null };
 
 export async function getAdmissionDocumentsAction(admissionId: string): Promise<AdmissionDocumentRow[]> {

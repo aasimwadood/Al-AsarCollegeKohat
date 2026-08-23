@@ -11,7 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { bulkAssignStudentShiftAction, bulkAssignStudentPlacementAction, graduateStudentsAction } from "@/lib/actions/students";
+import {
+  bulkAssignStudentShiftAction,
+  bulkAssignStudentPlacementAction,
+  graduateStudentsAction,
+  setStudentIdentifiersAction,
+} from "@/lib/actions/students";
 
 export type StudentRow = {
   id: string;
@@ -22,7 +27,52 @@ export type StudentRow = {
   groupId: string | null;
   sectionId: string | null;
   studentStatus: "active" | "graduated";
+  admissionNumber: string | null;
+  boardRegistrationNumber: string | null;
 };
+
+// Free-text, board-issued identifiers (Intermediate/BISE) — independent of
+// profiles.registration_number, which admit_student() owns exclusively.
+// Same shape as AdmissionsView's IdentifiersCell, wired to the profile-side
+// RPC instead of the admission-side one.
+function StudentIdentifiersCell({ student }: { student: StudentRow }) {
+  const [admissionNumber, setAdmissionNumber] = useState(student.admissionNumber ?? "");
+  const [boardRegistrationNumber, setBoardRegistrationNumber] = useState(student.boardRegistrationNumber ?? "");
+  const [isPending, startTransition] = useTransition();
+
+  const save = () => {
+    const formData = new FormData();
+    formData.set("studentId", student.id);
+    formData.set("admissionNumber", admissionNumber);
+    formData.set("boardRegistrationNumber", boardRegistrationNumber);
+    startTransition(async () => {
+      const result = await setStudentIdentifiersAction(formData);
+      if (result?.error) toast.error(result.error);
+      else toast.success("Identifiers updated");
+    });
+  };
+
+  return (
+    <div className="flex flex-col gap-1">
+      <Input
+        placeholder="Admission No"
+        value={admissionNumber}
+        disabled={isPending}
+        className="h-7 w-[140px] text-xs"
+        onChange={(e) => setAdmissionNumber(e.target.value)}
+        onBlur={save}
+      />
+      <Input
+        placeholder="Board Reg. No"
+        value={boardRegistrationNumber}
+        disabled={isPending}
+        className="h-7 w-[140px] text-xs"
+        onChange={(e) => setBoardRegistrationNumber(e.target.value)}
+        onBlur={save}
+      />
+    </div>
+  );
+}
 
 export function StudentsRosterView({
   students,
@@ -256,6 +306,7 @@ export function StudentsRosterView({
                     </TableHead>
                     <TableHead>Student</TableHead>
                     <TableHead>Batch</TableHead>
+                    <TableHead>Admission No / Board Reg. No</TableHead>
                     <TableHead>Shift</TableHead>
                     {groups.length > 0 && <TableHead>Group / Section</TableHead>}
                     <TableHead>Status</TableHead>
@@ -272,6 +323,9 @@ export function StudentsRosterView({
                         <p className="text-xs text-gray-500">@{s.username}</p>
                       </TableCell>
                       <TableCell>{s.batch ?? "—"}</TableCell>
+                      <TableCell>
+                        <StudentIdentifiersCell student={s} />
+                      </TableCell>
                       <TableCell>
                         {s.shiftId ? (
                           <Badge variant="secondary">{shiftName.get(s.shiftId) ?? "—"}</Badge>

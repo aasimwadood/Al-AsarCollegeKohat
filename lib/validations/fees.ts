@@ -10,6 +10,7 @@ export const upsertFeeStructureSchema = z.object({
   semesterNumber: z.coerce.number().int().min(1).max(8),
   academicSessionId: z.string().uuid(),
   components: z.array(feeComponentSchema).min(1, "Add at least one fee component"),
+  groupId: z.string().uuid().optional().or(z.literal("")),
 });
 
 export const generateVoucherSchema = z.object({

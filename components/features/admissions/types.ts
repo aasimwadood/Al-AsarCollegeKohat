@@ -17,6 +17,8 @@ export type AdmissionRow = {
   shiftId: string | null;
   groupId: string | null;
   sectionId: string | null;
+  admissionNumber: string | null;
+  boardRegistrationNumber: string | null;
   voucher: { id: string; voucherNumber: string; status: "unpaid" | "verified" | "canceled" } | null;
 };
 

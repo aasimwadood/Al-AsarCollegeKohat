@@ -66,6 +66,8 @@ export default async function FacultyAdmissionsPage() {
     shiftId: a.shift_id,
     groupId: a.group_id,
     sectionId: a.section_id,
+    admissionNumber: a.admission_number,
+    boardRegistrationNumber: a.board_registration_number,
     voucher: (() => {
       const v = voucherByAdmission.get(a.id);
       return v ? { id: v.id, voucherNumber: v.voucher_number, status: v.status } : null;

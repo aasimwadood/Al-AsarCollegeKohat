@@ -12,9 +12,10 @@ export default async function FeeStructuresPage() {
   await requireRole("admin", "principal");
   const supabase = await createClient();
 
-  const [{ data: programs }, { data: departments }, { data: academicSessions }, { data: structures }] = await Promise.all([
+  const [{ data: programs }, { data: departments }, { data: groups }, { data: academicSessions }, { data: structures }] = await Promise.all([
     supabase.from("programs").select("id, name, department_id, degree_level").order("name"),
     supabase.from("departments").select("id, name"),
+    supabase.from("groups").select("id, name, department_id").order("sort_order"),
     supabase.from("academic_sessions").select("id, label").order("label", { ascending: false }),
     supabase.from("fee_structures").select("*").order("created_at", { ascending: false }),
   ]);
@@ -35,9 +36,12 @@ export default async function FeeStructuresPage() {
   const programOptions = (programs ?? []).map((p) => ({
     id: p.id,
     name: p.name,
+    departmentId: p.department_id,
     departmentName: departmentName.get(p.department_id) ?? "—",
     degreeLevel: p.degree_level,
   }));
+  const groupOptions = (groups ?? []).map((g) => ({ id: g.id, name: g.name, departmentId: g.department_id }));
+  const groupName = new Map(groupOptions.map((g) => [g.id, g.name]));
   const programName = new Map(programOptions.map((p) => [p.id, `${p.name} (${p.departmentName})`]));
   const programDegreeLevel = new Map(programOptions.map((p) => [p.id, p.degreeLevel]));
   const sessionLabel = new Map((academicSessions ?? []).map((s) => [s.id, s.label]));
@@ -51,6 +55,7 @@ export default async function FeeStructuresPage() {
             <CardTitle>Fee Structures</CardTitle>
             <FeeStructureForm
               programs={programOptions}
+              groups={groupOptions}
               academicSessions={academicSessions ?? []}
               trigger={
                 <Button>
@@ -66,6 +71,7 @@ export default async function FeeStructuresPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Program</TableHead>
+                <TableHead>Group</TableHead>
                 <TableHead>Semester</TableHead>
                 <TableHead>Session</TableHead>
                 <TableHead>Components</TableHead>
@@ -80,6 +86,7 @@ export default async function FeeStructuresPage() {
                 return (
                   <TableRow key={s.id}>
                     <TableCell>{programName.get(s.program_id) ?? s.program_id}</TableCell>
+                    <TableCell>{s.group_id ? (groupName.get(s.group_id) ?? "—") : "—"}</TableCell>
                     <TableCell>{semesterLabel(s.semester_number, programDegreeLevel.get(s.program_id))}</TableCell>
                     <TableCell>{sessionLabel.get(s.academic_session_id) ?? "—"}</TableCell>
                     <TableCell className="text-sm text-gray-600">{components.map((c) => c.name).join(", ")}</TableCell>
@@ -88,12 +95,14 @@ export default async function FeeStructuresPage() {
                     <TableCell>
                       <FeeStructureForm
                         programs={programOptions}
+                        groups={groupOptions}
                         academicSessions={academicSessions ?? []}
                         initial={{
                           programId: s.program_id,
                           semesterNumber: s.semester_number,
                           academicSessionId: s.academic_session_id,
                           components: components.map((c) => ({ name: c.name, amount: String(c.amount) })),
+                          groupId: s.group_id ?? undefined,
                         }}
                         trigger={
                           <Button size="sm" variant="outline">
@@ -108,7 +117,7 @@ export default async function FeeStructuresPage() {
               })}
               {(!structures || structures.length === 0) && (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-8 text-center text-gray-500">
+                  <TableCell colSpan={8} className="py-8 text-center text-gray-500">
                     No fee structures configured yet.
                   </TableCell>
                 </TableRow>

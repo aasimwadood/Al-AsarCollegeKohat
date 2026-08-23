@@ -32,6 +32,7 @@ export async function upsertFeeStructureAction(formData: FormData): Promise<Acti
     semesterNumber: formData.get("semesterNumber"),
     academicSessionId: formData.get("academicSessionId"),
     components,
+    groupId: formData.get("groupId"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
 
@@ -41,6 +42,7 @@ export async function upsertFeeStructureAction(formData: FormData): Promise<Acti
     p_semester_number: parsed.data.semesterNumber,
     p_academic_session_id: parsed.data.academicSessionId,
     p_components: parsed.data.components,
+    p_group_id: parsed.data.groupId || null,
   });
   if (error) return { error: error.message };
 

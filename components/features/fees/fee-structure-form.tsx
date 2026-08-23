@@ -11,17 +11,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { upsertFeeStructureAction } from "@/lib/actions/fees";
 import { maxSemesterNumberFor, semesterLabel } from "@/lib/utils/degree-level";
 
-type Program = { id: string; name: string; departmentName: string; degreeLevel: string };
+type Program = { id: string; name: string; departmentId: string; departmentName: string; degreeLevel: string };
+type Group = { id: string; name: string; departmentId: string };
 type AcademicSession = { id: string; label: string };
 type Component = { name: string; amount: string };
 
 export function FeeStructureForm({
   programs,
+  groups,
   academicSessions,
   trigger,
   initial,
 }: {
   programs: Program[];
+  groups: Group[];
   academicSessions: AcademicSession[];
   trigger: React.ReactNode;
   initial?: {
@@ -29,12 +32,14 @@ export function FeeStructureForm({
     semesterNumber: number;
     academicSessionId: string;
     components: Component[];
+    groupId?: string;
   };
 }) {
   const [open, setOpen] = useState(false);
   const [programId, setProgramId] = useState(initial?.programId ?? "");
   const [semesterNumber, setSemesterNumber] = useState(String(initial?.semesterNumber ?? ""));
   const [academicSessionId, setAcademicSessionId] = useState(initial?.academicSessionId ?? "");
+  const [groupId, setGroupId] = useState(initial?.groupId ?? "");
   const [components, setComponents] = useState<Component[]>(initial?.components ?? [{ name: "Tuition Fee", amount: "" }]);
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -43,12 +48,17 @@ export function FeeStructureForm({
 
   const selectedProgram = programs.find((p) => p.id === programId);
   const availableSemesterNumbers = Array.from({ length: maxSemesterNumberFor(selectedProgram?.degreeLevel) }, (_, i) => i + 1);
+  // Only some departments (e.g. Intermediate) have Groups — the selector is
+  // omitted entirely for BS-style programs, same "only render when
+  // relevant" convention AdmissionsView/PromotionsView already established.
+  const availableGroups = selectedProgram ? groups.filter((g) => g.departmentId === selectedProgram.departmentId) : [];
 
   const onProgramChange = (nextProgramId: string) => {
     setProgramId(nextProgramId);
     const nextProgram = programs.find((p) => p.id === nextProgramId);
     const maxNumber = maxSemesterNumberFor(nextProgram?.degreeLevel);
     if (semesterNumber && Number(semesterNumber) > maxNumber) setSemesterNumber("");
+    setGroupId("");
   };
 
   const updateComponent = (i: number, field: keyof Component, value: string) => {
@@ -61,6 +71,10 @@ export function FeeStructureForm({
       setError("Select a program, semester, and academic session");
       return;
     }
+    if (availableGroups.length > 0 && !groupId) {
+      setError("Select a group");
+      return;
+    }
     const validComponents = components.filter((c) => c.name.trim() && Number(c.amount) >= 0);
     if (validComponents.length === 0) {
       setError("Add at least one fee component with a name and amount");
@@ -71,6 +85,7 @@ export function FeeStructureForm({
     formData.set("programId", programId);
     formData.set("semesterNumber", semesterNumber);
     formData.set("academicSessionId", academicSessionId);
+    formData.set("groupId", groupId);
     formData.set("components", JSON.stringify(validComponents.map((c) => ({ name: c.name, amount: Number(c.amount) }))));
 
     startTransition(async () => {
@@ -108,6 +123,24 @@ export function FeeStructureForm({
               </SelectContent>
             </Select>
           </div>
+
+          {availableGroups.length > 0 && (
+            <div>
+              <Label>Group</Label>
+              <Select value={groupId} onValueChange={setGroupId} disabled={isPending}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a group" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableGroups.map((g) => (
+                    <SelectItem key={g.id} value={g.id}>
+                      {g.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>

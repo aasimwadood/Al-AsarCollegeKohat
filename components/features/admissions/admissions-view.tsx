@@ -19,6 +19,7 @@ import {
   toggleAdmissionSettingsAction,
   getAdmissionDocumentsAction,
   uploadAdmissionDocumentAction,
+  setAdmissionIdentifiersAction,
   type AdmissionDocumentRow,
 } from "@/lib/actions/admissions";
 import { assignAdmissionShiftAction } from "@/lib/actions/shifts";
@@ -105,6 +106,7 @@ export function AdmissionsView({
                 <TableHead>Merit Category</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Reg. #</TableHead>
+                <TableHead>Admission No / Board Reg. No</TableHead>
                 <TableHead>Shift</TableHead>
                 <TableHead>Group / Section</TableHead>
                 <TableHead>Fee Voucher</TableHead>
@@ -126,6 +128,9 @@ export function AdmissionsView({
                     </Badge>
                   </TableCell>
                   <TableCell>{admission.registrationNumber ?? "—"}</TableCell>
+                  <TableCell>
+                    <IdentifiersCell admission={admission} canEdit={canAddStudent} />
+                  </TableCell>
                   <TableCell>
                     <ShiftCell admission={admission} shifts={shifts} canEdit={canAddStudent} />
                   </TableCell>
@@ -149,7 +154,7 @@ export function AdmissionsView({
               ))}
               {admissions.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} className="py-8 text-center text-gray-500">
+                  <TableCell colSpan={10} className="py-8 text-center text-gray-500">
                     No admission records yet.
                   </TableCell>
                 </TableRow>
@@ -348,6 +353,57 @@ function AddStudentDialog({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Free-text, board-issued identifiers (Intermediate/BISE) — independent of
+// the auto-generated Reg. # column, editable at any admission status
+// (unlike registration_number, which admit_student() owns exclusively).
+function IdentifiersCell({ admission, canEdit }: { admission: AdmissionRow; canEdit: boolean }) {
+  const [admissionNumber, setAdmissionNumber] = useState(admission.admissionNumber ?? "");
+  const [boardRegistrationNumber, setBoardRegistrationNumber] = useState(admission.boardRegistrationNumber ?? "");
+  const [isPending, startTransition] = useTransition();
+
+  const save = () => {
+    const formData = new FormData();
+    formData.set("admissionId", admission.id);
+    formData.set("admissionNumber", admissionNumber);
+    formData.set("boardRegistrationNumber", boardRegistrationNumber);
+    startTransition(async () => {
+      const result = await setAdmissionIdentifiersAction(formData);
+      if (result?.error) toast.error(result.error);
+      else toast.success("Identifiers updated");
+    });
+  };
+
+  if (!canEdit) {
+    return (
+      <div className="text-sm text-gray-600">
+        <p>{admission.admissionNumber ?? "—"}</p>
+        <p>{admission.boardRegistrationNumber ?? "—"}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <Input
+        placeholder="Admission No"
+        value={admissionNumber}
+        disabled={isPending}
+        className="h-7 w-[150px] text-xs"
+        onChange={(e) => setAdmissionNumber(e.target.value)}
+        onBlur={save}
+      />
+      <Input
+        placeholder="Board Reg. No"
+        value={boardRegistrationNumber}
+        disabled={isPending}
+        className="h-7 w-[150px] text-xs"
+        onChange={(e) => setBoardRegistrationNumber(e.target.value)}
+        onBlur={save}
+      />
+    </div>
   );
 }
 

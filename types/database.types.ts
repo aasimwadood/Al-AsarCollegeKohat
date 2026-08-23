@@ -74,6 +74,7 @@ type ProfilesRow = {
   registration_number: string | null; father_name: string | null; program_id: string | null; batch: string | null;
   shift_id: string | null; group_id: string | null; section_id: string | null;
   student_status: StudentStatusEnum;
+  admission_number: string | null; board_registration_number: string | null;
 };
 
 // Designations: Principal/HOD-managed focal-person titles ------------------
@@ -213,6 +214,9 @@ type AdmissionsRow = {
   approved_by: string | null; approved_at: string | null; canceled_by: string | null;
   canceled_at: string | null; cancel_reason: string | null; student_profile_id: string | null;
   created_at: string; updated_at: string; shift_id: string | null; group_id: string | null; section_id: string | null;
+  // Board-issued identifiers (Intermediate/BISE), independent of the
+  // internally auto-generated registration_number above (0083).
+  admission_number: string | null; board_registration_number: string | null;
 };
 type RegistrationCountersRow = { department_id: string; academic_year: number; last_seq: number };
 type AdmissionDocumentsRow = {
@@ -237,6 +241,10 @@ type PromotionsRow = {
 
 type FeeStructuresRow = {
   id: string; program_id: string; semester_number: number; academic_session_id: string;
+  // Intermediate Groups (Pre-Medical/Pre-Engineering/Computer Science/Arts)
+  // can each have their own fee within the same program (0082); null for
+  // BS-style ungrouped programs.
+  group_id: string | null;
   status: FeeStructureStatusEnum; total_amount: number; created_by: string | null;
   created_at: string; updated_at: string;
 };
@@ -540,7 +548,7 @@ export type Database = {
   public: {
     Tables: {
       departments: Table<DepartmentsRow, "id" | "hod_profile_id" | "description" | "image_path" | "established_year" | "labs_count" | "created_at" | "updated_at">;
-      profiles: Table<ProfilesRow, "phone" | "department_id" | "avatar_path" | "current_semester_id" | "is_active" | "directorate_id" | "jmc_id" | "college_id" | "created_at" | "updated_at" | "registration_number" | "father_name" | "program_id" | "batch" | "shift_id" | "group_id" | "section_id" | "student_status">;
+      profiles: Table<ProfilesRow, "phone" | "department_id" | "avatar_path" | "current_semester_id" | "is_active" | "directorate_id" | "jmc_id" | "college_id" | "created_at" | "updated_at" | "registration_number" | "father_name" | "program_id" | "batch" | "shift_id" | "group_id" | "section_id" | "student_status" | "admission_number" | "board_registration_number">;
       programs: Table<ProgramsRow, "id" | "created_at">;
 
       designation_types: Table<DesignationTypesRow, "id" | "created_at">;
@@ -571,14 +579,14 @@ export type Database = {
       attendance: Table<AttendanceRow, "id" | "marked_by" | "created_at">;
 
       admission_settings: Table<AdmissionSettingsRow, "is_enabled" | "enabled_by" | "enabled_at">;
-      admissions: Table<AdmissionsRow, "id" | "father_name" | "cnic" | "contact_number" | "email" | "merit_category" | "merit_number" | "status" | "registration_fee" | "crf_fee" | "admission_fee" | "tuition_fee" | "examination_fee" | "hostel_fee" | "transport_fee" | "fee_receipt_number" | "fee_paid_at" | "fee_approved_by" | "registration_number" | "semester_id" | "approved_by" | "approved_at" | "canceled_by" | "canceled_at" | "cancel_reason" | "student_profile_id" | "created_at" | "updated_at" | "shift_id" | "group_id" | "section_id">;
+      admissions: Table<AdmissionsRow, "id" | "father_name" | "cnic" | "contact_number" | "email" | "merit_category" | "merit_number" | "status" | "registration_fee" | "crf_fee" | "admission_fee" | "tuition_fee" | "examination_fee" | "hostel_fee" | "transport_fee" | "fee_receipt_number" | "fee_paid_at" | "fee_approved_by" | "registration_number" | "semester_id" | "approved_by" | "approved_at" | "canceled_by" | "canceled_at" | "cancel_reason" | "student_profile_id" | "created_at" | "updated_at" | "shift_id" | "group_id" | "section_id" | "admission_number" | "board_registration_number">;
       registration_counters: Table<RegistrationCountersRow, "last_seq">;
       admission_documents: Table<AdmissionDocumentsRow, "id" | "uploaded_by" | "uploaded_at">;
 
       fee_payments: Table<FeePaymentsRow, "id" | "semester_id" | "status" | "receipt_number" | "verified_by" | "verified_at" | "due_date" | "notes" | "created_at">;
       promotions: Table<PromotionsRow, "id" | "cgpa" | "academic_standing" | "max_courses" | "status" | "fee_receipt_number" | "fee_verified_by" | "fee_verified_at" | "created_at" | "updated_at">;
 
-      fee_structures: Table<FeeStructuresRow, "id" | "status" | "total_amount" | "created_by" | "created_at" | "updated_at">;
+      fee_structures: Table<FeeStructuresRow, "id" | "group_id" | "status" | "total_amount" | "created_by" | "created_at" | "updated_at">;
       fee_structure_components: Table<FeeStructureComponentsRow, "id" | "sort_order" | "created_at">;
       fee_vouchers: Table<FeeVouchersRow, "id" | "promotion_id" | "admission_id" | "student_profile_id" | "fee_structure_id" | "status" | "generated_by" | "generated_at" | "verified_by" | "verified_at" | "canceled_by" | "canceled_at" | "cancel_reason" | "matched_bank_row_id" | "is_custom" | "custom_reason" | "created_at" | "updated_at">;
       fee_voucher_components: Table<FeeVoucherComponentsRow, "id" | "sort_order">;
@@ -661,12 +669,20 @@ export type Database = {
       bulk_assign_student_shift: { Args: { p_student_ids: string[]; p_shift_id: string | null }; Returns: ProfilesRow[] };
       bulk_assign_student_placement: { Args: { p_student_ids: string[]; p_group_id: string | null; p_section_id: string | null }; Returns: ProfilesRow[] };
       graduate_students: { Args: { p_student_ids: string[] }; Returns: ProfilesRow[] };
+      set_admission_identifiers: {
+        Args: { p_admission_id: string; p_admission_number: string | null; p_board_registration_number: string | null };
+        Returns: AdmissionsRow;
+      };
+      set_student_identifiers: {
+        Args: { p_student_id: string; p_admission_number: string | null; p_board_registration_number: string | null };
+        Returns: ProfilesRow;
+      };
       register_for_promotion: { Args: { p_promotion_id: string; p_course_ids: string[] }; Returns: PromotionsRow };
       verify_promotion_fee: { Args: { p_promotion_id: string; p_receipt_number?: string | null }; Returns: PromotionsRow };
       clear_promotion_fee: { Args: { p_promotion_id: string; p_voucher_id: string }; Returns: PromotionsRow };
       manually_clear_promotion_fee: { Args: { p_promotion_id: string; p_reason: string }; Returns: PromotionsRow };
       upsert_fee_structure: {
-        Args: { p_program_id: string; p_semester_number: number; p_academic_session_id: string; p_components: Json };
+        Args: { p_program_id: string; p_semester_number: number; p_academic_session_id: string; p_components: Json; p_group_id?: string | null };
         Returns: FeeStructuresRow;
       };
       generate_fee_voucher: { Args: { p_promotion_id: string }; Returns: FeeVouchersRow };
