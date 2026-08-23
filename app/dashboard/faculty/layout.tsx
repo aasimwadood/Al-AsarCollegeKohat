@@ -5,6 +5,7 @@ import { getInitialNotifications } from "@/lib/services/notifications";
 import { getAccessibleResources } from "@/lib/permissions/role-permissions";
 import { filterNavByAccess } from "@/lib/permissions/policies";
 import { getProctorNavExtras, getLibraryNavExtras } from "@/lib/permissions/proctorial";
+import { getInternshipNavExtras } from "@/lib/permissions/internship";
 
 const NAVIGATION: DashboardNavItem[] = [
   { name: "Dashboard", icon: "LayoutDashboard", href: "/dashboard/faculty" },
@@ -17,19 +18,21 @@ const NAVIGATION: DashboardNavItem[] = [
   { name: "Announcements", icon: "MessageSquare", href: "/dashboard/faculty/announcements", resource: "announcements" },
   { name: "Class Schedule", icon: "Calendar", href: "/dashboard/faculty/schedule", resource: "timetable" },
   { name: "FYP Supervision", icon: "Award", href: "/dashboard/faculty/fyp", resource: "fyp" },
+  { name: "Internship Supervision", icon: "Building2", href: "/dashboard/faculty/internship", resource: "internship" },
   { name: "Course File Report", icon: "FileText", href: "/dashboard/faculty/course-file", resource: "courseFileReports" },
   { name: "Profile", icon: "User", href: "/dashboard/faculty/profile" },
 ];
 
 export default async function FacultyLayout({ children }: { children: React.ReactNode }) {
   const profile = await requireRole("faculty", "department", "coordinator", "controller");
-  const [notifications, accessible, proctorExtras, libraryExtras] = await Promise.all([
+  const [notifications, accessible, proctorExtras, libraryExtras, internshipExtras] = await Promise.all([
     getInitialNotifications(profile.id),
     getAccessibleResources(profile.role),
     getProctorNavExtras(profile.id),
     getLibraryNavExtras(profile.id),
+    getInternshipNavExtras(profile.id),
   ]);
-  const navigation = [...filterNavByAccess(NAVIGATION, accessible), ...proctorExtras, ...libraryExtras];
+  const navigation = [...filterNavByAccess(NAVIGATION, accessible), ...proctorExtras, ...libraryExtras, ...internshipExtras];
 
   return (
     <DashboardLayout

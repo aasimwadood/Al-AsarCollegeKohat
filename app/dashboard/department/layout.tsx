@@ -6,6 +6,7 @@ import { getAccessibleResources } from "@/lib/permissions/role-permissions";
 import { filterNavByAccess } from "@/lib/permissions/policies";
 import { getTeachingNavExtras } from "@/lib/permissions/teaching";
 import { getProctorNavExtras, getLibraryNavExtras } from "@/lib/permissions/proctorial";
+import { getInternshipNavExtras } from "@/lib/permissions/internship";
 
 const NAVIGATION: DashboardNavItem[] = [
   { name: "Dashboard", icon: "LayoutDashboard", href: "/dashboard/department" },
@@ -18,6 +19,7 @@ const NAVIGATION: DashboardNavItem[] = [
   { name: "Marks Overview", icon: "FileCheck", href: "/dashboard/department/marks", resource: "results" },
   { name: "Curriculum", icon: "BookOpen", href: "/dashboard/department/curriculum" },
   { name: "FYP Settings", icon: "Award", href: "/dashboard/department/fyp" },
+  { name: "Internship Settings", icon: "Building2", href: "/dashboard/department/internship" },
   { name: "Reports", icon: "TrendingUp", href: "/dashboard/department/reports" },
   { name: "Announcements", icon: "Bell", href: "/dashboard/department/announcements", resource: "announcements" },
   { name: "Designations", icon: "Shield", href: "/dashboard/department/designations" },
@@ -25,14 +27,15 @@ const NAVIGATION: DashboardNavItem[] = [
 
 export default async function DepartmentLayout({ children }: { children: React.ReactNode }) {
   const profile = await requireRole("department");
-  const [notifications, accessible, teachingExtras, proctorExtras, libraryExtras] = await Promise.all([
+  const [notifications, accessible, teachingExtras, proctorExtras, libraryExtras, internshipExtras] = await Promise.all([
     getInitialNotifications(profile.id),
     getAccessibleResources(profile.role),
     getTeachingNavExtras(profile.id),
     getProctorNavExtras(profile.id),
     getLibraryNavExtras(profile.id),
+    getInternshipNavExtras(profile.id),
   ]);
-  const navigation = [...filterNavByAccess(NAVIGATION, accessible), ...teachingExtras, ...proctorExtras, ...libraryExtras];
+  const navigation = [...filterNavByAccess(NAVIGATION, accessible), ...teachingExtras, ...proctorExtras, ...libraryExtras, ...internshipExtras];
 
   return (
     <DashboardLayout

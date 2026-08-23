@@ -18,6 +18,7 @@ export const RESOURCE_ROLES = {
   admissions: ["admin", "department", "faculty", "administration", "focal_person_intermediate"],
   promotions: ["admin", "department", "faculty", "administration", "focal_person_intermediate"],
   fyp: ["admin", "department", "faculty", "student", "coordinator"],
+  internship: ["admin", "faculty", "student"],
   timetable: ["admin", "department", "coordinator", "faculty", "student"],
   results: ["admin", "faculty", "controller", "student", "department", "focal_person_intermediate"],
   courseMaterials: ["admin", "faculty", "student"],

@@ -4,9 +4,11 @@ export type AdmissionRow = {
   id: string;
   temporaryId: string;
   fullName: string;
+  fatherName: string | null;
   cnic: string | null;
   contactNumber: string | null;
   email: string | null;
+  programId: string | null;
   programName: string | null;
   meritCategory: MeritCategoryEnum;
   meritNumber: number | null;

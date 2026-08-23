@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { UserPlus, Loader2, FileText, Upload, Download } from "lucide-react";
+import { UserPlus, Loader2, FileText, Upload, Download, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import {
   createAdmissionAction,
+  editAdmissionAction,
+  deleteAdmissionAction,
   approveAdmissionFeeAction,
   admitStudentAction,
   cancelAdmissionAction,
@@ -77,6 +79,8 @@ export function AdmissionsView({
   const canApproveFee = role === "administration" || role === "admin";
   const canAdmitOrCancel = role === "department" || role === "faculty" || role === "admin" || role === "focal_person_intermediate";
   const canUploadDocuments = role === "department" || role === "faculty" || role === "admin" || role === "focal_person_intermediate";
+  // Same role set edit_admission/delete_admission grant server-side.
+  const canEditOrDelete = canAdmitOrCancel;
 
   return (
     <div className="space-y-6">
@@ -146,8 +150,10 @@ export function AdmissionsView({
                   <TableCell>
                     <RowActions
                       admission={admission}
+                      programs={programs}
                       canApproveFee={canApproveFee}
                       canAdmitOrCancel={canAdmitOrCancel}
+                      canEditOrDelete={canEditOrDelete}
                     />
                   </TableCell>
                 </TableRow>
@@ -572,12 +578,16 @@ function FeeVoucherCell({ admission, canGenerate }: { admission: AdmissionRow; c
 
 function RowActions({
   admission,
+  programs,
   canApproveFee,
   canAdmitOrCancel,
+  canEditOrDelete,
 }: {
   admission: AdmissionRow;
+  programs: { id: string; name: string }[];
   canApproveFee: boolean;
   canAdmitOrCancel: boolean;
+  canEditOrDelete: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
   const [receiptOpen, setReceiptOpen] = useState(false);
@@ -591,8 +601,10 @@ function RowActions({
     });
   };
 
+  let statusAction: React.ReactNode = null;
+
   if (admission.status === "pending" && canApproveFee) {
-    return (
+    statusAction = (
       <Dialog open={receiptOpen} onOpenChange={setReceiptOpen}>
         <Button size="sm" onClick={() => setReceiptOpen(true)}>
           Verify Fee
@@ -633,19 +645,15 @@ function RowActions({
         </DialogContent>
       </Dialog>
     );
-  }
-
-  if (admission.status === "fee_approved" && canAdmitOrCancel) {
-    return (
+  } else if (admission.status === "fee_approved" && canAdmitOrCancel) {
+    statusAction = (
       <Button size="sm" onClick={admit} disabled={isPending}>
         {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         Confirm Admission
       </Button>
     );
-  }
-
-  if (admission.status === "admitted" && canAdmitOrCancel) {
-    return (
+  } else if (admission.status === "admitted" && canAdmitOrCancel) {
+    statusAction = (
       <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <Button size="sm" variant="outline" className="text-red-600" onClick={() => setCancelOpen(true)}>
           Cancel
@@ -687,7 +695,176 @@ function RowActions({
     );
   }
 
-  return <span className="text-sm text-gray-400">—</span>;
+  if (!statusAction && !canEditOrDelete) {
+    return <span className="text-sm text-gray-400">—</span>;
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {statusAction}
+      {canEditOrDelete && <EditAdmissionDialog admission={admission} programs={programs} />}
+      {canEditOrDelete && <DeleteAdmissionButton admission={admission} />}
+    </div>
+  );
+}
+
+function EditAdmissionDialog({ admission, programs }: { admission: AdmissionRow; programs: { id: string; name: string }[] }) {
+  const [open, setOpen] = useState(false);
+  const [meritCategory, setMeritCategory] = useState(admission.meritCategory);
+  const [programId, setProgramId] = useState(admission.programId ?? "");
+  const [error, setError] = useState("");
+  const [isPending, startTransition] = useTransition();
+
+  const onSubmit = (formData: FormData) => {
+    setError("");
+    formData.set("admissionId", admission.id);
+    formData.set("meritCategory", meritCategory);
+    formData.set("programId", programId);
+    startTransition(async () => {
+      const result = await editAdmissionAction(formData);
+      if (result?.error) setError(result.error);
+      else {
+        setOpen(false);
+        toast.success("Admission updated");
+      }
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="ghost">
+          <Pencil className="mr-1 h-3 w-3" />
+          Edit
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Admission — {admission.fullName}</DialogTitle>
+        </DialogHeader>
+        <form action={onSubmit} className="space-y-4">
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <div>
+            <Label htmlFor={`edit-fullName-${admission.id}`}>Full Name *</Label>
+            <Input id={`edit-fullName-${admission.id}`} name="fullName" defaultValue={admission.fullName} disabled={isPending} required />
+          </div>
+          <div>
+            <Label htmlFor={`edit-fatherName-${admission.id}`}>Father&apos;s Name</Label>
+            <Input id={`edit-fatherName-${admission.id}`} name="fatherName" defaultValue={admission.fatherName ?? ""} disabled={isPending} />
+          </div>
+          <div>
+            <Label htmlFor={`edit-cnic-${admission.id}`}>CNIC</Label>
+            <Input id={`edit-cnic-${admission.id}`} name="cnic" defaultValue={admission.cnic ?? ""} disabled={isPending} />
+          </div>
+          <div>
+            <Label htmlFor={`edit-contactNumber-${admission.id}`}>Contact Number</Label>
+            <Input id={`edit-contactNumber-${admission.id}`} name="contactNumber" defaultValue={admission.contactNumber ?? ""} disabled={isPending} />
+          </div>
+          <div>
+            <Label htmlFor={`edit-email-${admission.id}`}>Email</Label>
+            <Input id={`edit-email-${admission.id}`} name="email" type="email" defaultValue={admission.email ?? ""} disabled={isPending} />
+          </div>
+          {programs.length > 0 && (
+            <div>
+              <Label>Program</Label>
+              <Select value={programId || "none"} onValueChange={(v) => setProgramId(v === "none" ? "" : v)} disabled={isPending}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a program" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Unassigned</SelectItem>
+                  {programs.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <div>
+            <Label>Merit Category</Label>
+            <Select value={meritCategory} onValueChange={(v) => setMeritCategory(v as typeof meritCategory)} disabled={isPending}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MERIT_CATEGORIES.map((m) => (
+                  <SelectItem key={m} value={m}>
+                    {MERIT_LABELS[m]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor={`edit-meritNumber-${admission.id}`}>Merit Number</Label>
+            <Input
+              id={`edit-meritNumber-${admission.id}`}
+              name="meritNumber"
+              type="number"
+              defaultValue={admission.meritNumber ?? ""}
+              disabled={isPending}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteAdmissionButton({ admission }: { admission: AdmissionRow }) {
+  const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  const confirmDelete = () => {
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.set("admissionId", admission.id);
+      const result = await deleteAdmissionAction(formData);
+      if (result?.error) toast.error(result.error);
+      else {
+        toast.success("Admission deleted");
+        setOpen(false);
+      }
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <Button size="sm" variant="ghost" className="text-red-600" onClick={() => setOpen(true)}>
+        <Trash2 className="mr-1 h-3 w-3" />
+        Delete
+      </Button>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete Admission — {admission.fullName}</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-gray-600">
+          This permanently removes this admission record{admission.status === "admitted" ? " and its registration number" : ""}. This
+          cannot be undone.
+        </p>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
+            Cancel
+          </Button>
+          <Button type="button" variant="destructive" onClick={confirmDelete} disabled={isPending}>
+            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Delete Permanently
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function DocumentsDialog({ admission, canUpload }: { admission: AdmissionRow; canUpload: boolean }) {

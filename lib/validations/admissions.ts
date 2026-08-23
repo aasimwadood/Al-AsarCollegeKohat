@@ -24,6 +24,22 @@ export const createAdmissionSchema = z.object({
   groupId: z.string().uuid().optional().or(z.literal("")),
 });
 
+export const editAdmissionSchema = z.object({
+  admissionId: z.string().uuid(),
+  programId: z.string().uuid().optional().or(z.literal("")),
+  fullName: z.string().trim().min(1, "Full name is required").max(200),
+  fatherName: z.string().trim().max(200).optional().or(z.literal("")),
+  cnic: z.string().trim().max(20).optional().or(z.literal("")),
+  contactNumber: z.string().trim().max(30).optional().or(z.literal("")),
+  email: z.string().trim().email("Enter a valid email").optional().or(z.literal("")),
+  meritCategory: z.enum(MERIT_CATEGORIES),
+  meritNumber: z.coerce.number().int().optional(),
+});
+
+export const deleteAdmissionSchema = z.object({
+  admissionId: z.string().uuid(),
+});
+
 export const approveFeeSchema = z.object({
   admissionId: z.string().uuid(),
   receiptNumber: z.string().trim().min(1, "Receipt number is required"),

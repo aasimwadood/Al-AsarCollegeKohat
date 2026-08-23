@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/session";
 import {
   createAdmissionSchema,
+  editAdmissionSchema,
+  deleteAdmissionSchema,
   approveFeeSchema,
   cancelAdmissionSchema,
   uploadAdmissionDocumentSchema,
@@ -99,6 +101,56 @@ export async function createAdmissionAction(formData: FormData): Promise<ActionR
     }
   }
 
+  revalidatePath("/dashboard", "layout");
+  return {};
+}
+
+export async function editAdmissionAction(formData: FormData): Promise<ActionResult> {
+  const profile = await requireRole("department", "faculty", "admin", "focal_person_intermediate");
+
+  const parsed = editAdmissionSchema.safeParse({
+    admissionId: formData.get("admissionId"),
+    programId: formData.get("programId"),
+    fullName: formData.get("fullName"),
+    fatherName: formData.get("fatherName"),
+    cnic: formData.get("cnic"),
+    contactNumber: formData.get("contactNumber"),
+    email: formData.get("email"),
+    meritCategory: formData.get("meritCategory"),
+    meritNumber: formData.get("meritNumber"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("edit_admission", {
+    p_admission_id: parsed.data.admissionId,
+    p_full_name: parsed.data.fullName,
+    p_father_name: parsed.data.fatherName || null,
+    p_cnic: parsed.data.cnic || null,
+    p_contact_number: parsed.data.contactNumber || null,
+    p_email: parsed.data.email || null,
+    p_program_id: parsed.data.programId || null,
+    p_merit_category: parsed.data.meritCategory,
+    p_merit_number: parsed.data.meritNumber ?? null,
+  });
+  if (error) return { error: error.message };
+
+  await logAudit(profile.id, "edit_admission", "admissions", parsed.data.admissionId);
+  revalidatePath("/dashboard", "layout");
+  return {};
+}
+
+export async function deleteAdmissionAction(formData: FormData): Promise<ActionResult> {
+  const profile = await requireRole("department", "faculty", "admin", "focal_person_intermediate");
+
+  const parsed = deleteAdmissionSchema.safeParse({ admissionId: formData.get("admissionId") });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("delete_admission", { p_admission_id: parsed.data.admissionId });
+  if (error) return { error: error.message };
+
+  await logAudit(profile.id, "delete_admission", "admissions", parsed.data.admissionId);
   revalidatePath("/dashboard", "layout");
   return {};
 }

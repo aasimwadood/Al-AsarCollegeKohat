@@ -15,6 +15,7 @@ const NAVIGATION: DashboardNavItem[] = [
   { name: "Course Materials", icon: "BookOpen", href: "/dashboard/student/materials", resource: "courseMaterials" },
   { name: "Announcements", icon: "Bell", href: "/dashboard/student/announcements" },
   { name: "Final Year Project", icon: "FileText", href: "/dashboard/student/fyp", resource: "fyp" },
+  { name: "Internship", icon: "Building2", href: "/dashboard/student/internship", resource: "internship" },
   { name: "Profile", icon: "User", href: "/dashboard/student/profile" },
 ];
 
