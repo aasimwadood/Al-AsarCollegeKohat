@@ -18,7 +18,8 @@ export type UserRoleEnum =
   | "admin" | "faculty" | "student" | "department"
   | "controller" | "coordinator" | "principal" | "administration"
   | "focal_person_intermediate"
-  | "hed_admin" | "directorate_admin" | "jmc_admin" | "college_admin";
+  | "hed_admin" | "directorate_admin" | "jmc_admin" | "college_admin"
+  | "site_supervisor";
 export type OrgStatusEnum = "active" | "inactive";
 export type AdmissionStatusEnum = "pending" | "fee_approved" | "admitted" | "canceled";
 export type PromotionStatusEnum =
@@ -46,8 +47,8 @@ export type StudentStatusEnum = "active" | "graduated";
 export type InternshipAssignmentStatusEnum =
   | "supervisor_pending" | "supervisor_rejected" | "assigned" | "in_progress"
   | "completion_pending" | "completed" | "cancelled";
-export type InternshipSupervisorRequestStatusEnum = "pending" | "agreed" | "disagreed";
-export type InternshipReportStatusEnum = "pending" | "submitted" | "approved" | "rejected";
+export type InternshipSupervisorRequestStatusEnum = "pending" | "agreed" | "disagreed" | "cancelled";
+export type InternshipReportStatusEnum = "pending" | "submitted" | "site_supervisor_submitted" | "approved" | "rejected";
 export type InternshipFinalStatusEnum = "successfully_completed" | "not_completed";
 export type FypEvaluationCriterionEnum =
   | "innovation" | "technical_implementation" | "problem_solving"
@@ -96,6 +97,7 @@ type InternshipConfigsRow = {
   eligibility_criteria: string | null; application_open_date: string | null; application_close_date: string | null;
   internship_start_date: string | null; internship_end_date: string | null; duration_weeks: number;
   required_reports: number; report_interval_weeks: number; allow_cross_department_supervisor: boolean;
+  working_days: number[];
   created_by: string | null; updated_by: string | null; created_at: string; updated_at: string;
 };
 type InternshipCompaniesRow = {
@@ -111,26 +113,46 @@ type InternshipMousRow = {
 };
 type InternshipAssignmentsRow = {
   id: string; student_profile_id: string; config_id: string; department_id: string; company_id: string;
-  mou_id: string; supervisor_profile_id: string | null; status: InternshipAssignmentStatusEnum;
+  mou_id: string; supervisor_profile_id: string | null; site_supervisor_profile_id: string | null;
+  status: InternshipAssignmentStatusEnum;
   duration_weeks: number; start_date: string | null; end_date: string | null; assigned_at: string | null;
   completed_at: string | null; created_at: string; updated_at: string;
+  activity_log_student_signed_at: string | null; activity_log_site_supervisor_signed_at: string | null;
+  activity_log_academic_signed_at: string | null;
 };
 type InternshipSupervisorRequestsRow = {
   id: string; assignment_id: string; supervisor_profile_id: string; status: InternshipSupervisorRequestStatusEnum;
   reason: string | null; requested_at: string; responded_at: string | null; responded_by: string | null;
 };
 type InternshipSupervisorCapacityRow = { profile_id: string; capacity: number; set_by: string | null; updated_at: string };
+type InternshipCompanySupervisorsRow = { company_id: string; supervisor_profile_id: string };
+type InternshipSiteSupervisorRequestsRow = {
+  id: string; assignment_id: string; site_supervisor_profile_id: string; status: InternshipSupervisorRequestStatusEnum;
+  reason: string | null; requested_at: string; responded_at: string | null; responded_by: string | null;
+};
 type InternshipReportsRow = {
   id: string; assignment_id: string; report_number: number; period_start: string; period_end: string;
-  status: InternshipReportStatusEnum; early_submission_allowed: boolean; content: string | null;
+  status: InternshipReportStatusEnum; early_submission_allowed: boolean;
+  tasks_performed: string | null; learning_experience: string | null; challenges: string | null;
   document_path: string | null; student_remarks: string | null; submitted_at: string | null;
-  reviewed_by: string | null; reviewed_at: string | null; review_remarks: string | null;
+  reviewed_by: string | null; reviewed_at: string | null; review_remarks: string | null; academic_scores: Json | null;
+  site_supervisor_scores: Json | null; site_supervisor_remarks: string | null;
+  site_supervisor_reviewed_by: string | null; site_supervisor_reviewed_at: string | null;
   created_at: string; updated_at: string;
 };
 type InternshipReportSubmissionsRow = {
-  id: string; report_id: string; content: string | null; document_path: string | null; student_remarks: string | null;
+  id: string; report_id: string;
+  tasks_performed: string | null; learning_experience: string | null; challenges: string | null;
+  document_path: string | null; student_remarks: string | null;
   submitted_at: string; status_at_review: "approved" | "rejected" | null; reviewed_by: string | null;
-  reviewed_at: string | null; review_remarks: string | null;
+  reviewed_at: string | null; review_remarks: string | null; academic_scores: Json | null;
+  site_supervisor_status: "pending" | "forwarded" | "rejected" | null;
+  site_supervisor_scores: Json | null; site_supervisor_remarks: string | null;
+  site_supervisor_reviewed_by: string | null; site_supervisor_reviewed_at: string | null;
+};
+type InternshipActivityLogsRow = {
+  id: string; assignment_id: string; week_number: number; tasks_performed: string | null;
+  hours: number | null; updated_at: string;
 };
 type InternshipEvaluationsRow = {
   id: string; assignment_id: string; supervisor_profile_id: string; completion_confirmed: boolean;
@@ -141,6 +163,15 @@ type InternshipEvaluationsRow = {
 type InternshipCertificateCountersRow = { department_id: string; academic_year: number; last_seq: number };
 type InternshipCertificatesRow = {
   id: string; assignment_id: string; certificate_number: string; generated_by: string | null; generated_at: string;
+};
+export type InternshipAttendanceStatusEnum = "present" | "absent" | "leave" | "half_day";
+type InternshipAttendanceRow = {
+  id: string; assignment_id: string; attendance_date: string; status: InternshipAttendanceStatusEnum;
+  marked_by: string | null; locked: boolean; created_at: string; updated_at: string;
+};
+type InternshipAttendanceCorrectionsRow = {
+  id: string; attendance_id: string; old_status: string; new_status: string;
+  changed_by: string | null; reason: string; changed_at: string;
 };
 
 // Proctorial Board: duty scheduling and complaints -------------------------
@@ -614,7 +645,7 @@ export type Database = {
       designation_assignments: Table<DesignationAssignmentsRow, "id" | "department_id" | "assigned_by" | "assigned_at">;
       internship_configs: Table<
         InternshipConfigsRow,
-        "id" | "is_enabled" | "eligibility_criteria" | "application_open_date" | "application_close_date" | "internship_start_date" | "internship_end_date" | "duration_weeks" | "required_reports" | "report_interval_weeks" | "allow_cross_department_supervisor" | "created_by" | "updated_by" | "created_at" | "updated_at"
+        "id" | "is_enabled" | "eligibility_criteria" | "application_open_date" | "application_close_date" | "internship_start_date" | "internship_end_date" | "duration_weeks" | "required_reports" | "report_interval_weeks" | "allow_cross_department_supervisor" | "working_days" | "created_by" | "updated_by" | "created_at" | "updated_at"
       >;
       internship_companies: Table<
         InternshipCompaniesRow,
@@ -626,27 +657,38 @@ export type Database = {
       >;
       internship_assignments: Table<
         InternshipAssignmentsRow,
-        "id" | "supervisor_profile_id" | "status" | "start_date" | "end_date" | "assigned_at" | "completed_at" | "created_at" | "updated_at"
+        "id" | "supervisor_profile_id" | "site_supervisor_profile_id" | "status" | "start_date" | "end_date" | "assigned_at" | "completed_at" | "created_at" | "updated_at" | "activity_log_student_signed_at" | "activity_log_site_supervisor_signed_at" | "activity_log_academic_signed_at"
       >;
       internship_supervisor_requests: Table<
         InternshipSupervisorRequestsRow,
         "id" | "status" | "reason" | "requested_at" | "responded_at" | "responded_by"
       >;
       internship_supervisor_capacity: Table<InternshipSupervisorCapacityRow, "set_by" | "updated_at">;
+      internship_company_supervisors: Table<InternshipCompanySupervisorsRow, never>;
+      internship_site_supervisor_requests: Table<
+        InternshipSiteSupervisorRequestsRow,
+        "id" | "status" | "reason" | "requested_at" | "responded_at" | "responded_by"
+      >;
       internship_reports: Table<
         InternshipReportsRow,
-        "id" | "status" | "early_submission_allowed" | "content" | "document_path" | "student_remarks" | "submitted_at" | "reviewed_by" | "reviewed_at" | "review_remarks" | "created_at" | "updated_at"
+        "id" | "status" | "early_submission_allowed" | "tasks_performed" | "learning_experience" | "challenges" | "document_path" | "student_remarks" | "submitted_at" | "reviewed_by" | "reviewed_at" | "review_remarks" | "academic_scores" | "site_supervisor_scores" | "site_supervisor_remarks" | "site_supervisor_reviewed_by" | "site_supervisor_reviewed_at" | "created_at" | "updated_at"
       >;
       internship_report_submissions: Table<
         InternshipReportSubmissionsRow,
-        "id" | "content" | "document_path" | "student_remarks" | "submitted_at" | "status_at_review" | "reviewed_by" | "reviewed_at" | "review_remarks"
+        "id" | "tasks_performed" | "learning_experience" | "challenges" | "document_path" | "student_remarks" | "submitted_at" | "status_at_review" | "reviewed_by" | "reviewed_at" | "review_remarks" | "academic_scores" | "site_supervisor_status" | "site_supervisor_scores" | "site_supervisor_remarks" | "site_supervisor_reviewed_by" | "site_supervisor_reviewed_at"
       >;
+      internship_activity_logs: Table<InternshipActivityLogsRow, "id" | "tasks_performed" | "hours" | "updated_at">;
       internship_evaluations: Table<
         InternshipEvaluationsRow,
         "id" | "overall_performance" | "attendance_note" | "remarks" | "recommendation" | "details" | "submitted_at" | "updated_at"
       >;
       internship_certificate_counters: Table<InternshipCertificateCountersRow, "last_seq">;
       internship_certificates: Table<InternshipCertificatesRow, "id" | "generated_by" | "generated_at">;
+      internship_attendance: Table<
+        InternshipAttendanceRow,
+        "id" | "marked_by" | "locked" | "created_at" | "updated_at"
+      >;
+      internship_attendance_corrections: Table<InternshipAttendanceCorrectionsRow, "id" | "changed_by" | "changed_at">;
       proctor_duties: Table<ProctorDutiesRow, "id" | "department_id" | "shift_time" | "location" | "status" | "assigned_by" | "notes" | "created_at">;
       proctor_complaints: Table<ProctorComplaintsRow, "id" | "against_student_id" | "status" | "reviewed_by" | "created_at">;
       college_types: Table<CollegeTypesRow, "id" | "created_at">;
@@ -787,7 +829,11 @@ export type Database = {
       };
       delete_admission: { Args: { p_admission_id: string }; Returns: undefined };
       apply_for_internship: {
-        Args: { p_config_id: string; p_company_id: string; p_supervisor_profile_id: string };
+        Args: { p_config_id: string; p_company_id: string; p_supervisor_profile_id: string; p_site_supervisor_profile_id: string };
+        Returns: InternshipAssignmentsRow;
+      };
+      respond_to_internship_site_supervision: {
+        Args: { p_request_id: string; p_approve: boolean; p_reason?: string | null };
         Returns: InternshipAssignmentsRow;
       };
       respond_to_internship_supervision: {
@@ -795,12 +841,27 @@ export type Database = {
         Returns: InternshipAssignmentsRow;
       };
       submit_internship_report: {
-        Args: { p_report_id: string; p_content: string; p_document_path?: string | null; p_student_remarks?: string | null };
+        Args: {
+          p_report_id: string; p_tasks_performed: string; p_learning_experience: string; p_challenges: string;
+          p_document_path?: string | null; p_student_remarks?: string | null;
+        };
         Returns: InternshipReportsRow;
       };
       review_internship_report: {
-        Args: { p_report_id: string; p_approve: boolean; p_remarks?: string | null };
+        Args: { p_report_id: string; p_approve: boolean; p_remarks?: string | null; p_scores?: Json | null };
         Returns: InternshipReportsRow;
+      };
+      submit_site_supervisor_report_section: {
+        Args: { p_report_id: string; p_approve: boolean; p_scores?: Json | null; p_remarks?: string | null };
+        Returns: InternshipReportsRow;
+      };
+      update_internship_activity_log: {
+        Args: { p_assignment_id: string; p_week_number: number; p_tasks_performed: string | null; p_hours: number | null };
+        Returns: InternshipActivityLogsRow;
+      };
+      sign_internship_activity_log: {
+        Args: { p_assignment_id: string };
+        Returns: InternshipAssignmentsRow;
       };
       set_internship_report_early_submission: {
         Args: { p_report_id: string; p_allow: boolean };
@@ -815,6 +876,15 @@ export type Database = {
         Returns: InternshipEvaluationsRow;
       };
       generate_internship_certificate: { Args: { p_assignment_id: string }; Returns: InternshipCertificatesRow };
+      mark_internship_attendance: { Args: { p_assignment_id: string; p_entries: Json }; Returns: InternshipAttendanceRow[] };
+      lock_internship_attendance_week: {
+        Args: { p_assignment_id: string; p_week_start: string; p_week_end: string };
+        Returns: InternshipAttendanceRow[];
+      };
+      correct_internship_attendance: {
+        Args: { p_attendance_id: string; p_new_status: string; p_reason: string };
+        Returns: InternshipAttendanceRow;
+      };
       register_for_promotion: { Args: { p_promotion_id: string; p_course_ids: string[] }; Returns: PromotionsRow };
       verify_promotion_fee: { Args: { p_promotion_id: string; p_receipt_number?: string | null }; Returns: PromotionsRow };
       clear_promotion_fee: { Args: { p_promotion_id: string; p_voucher_id: string }; Returns: PromotionsRow };

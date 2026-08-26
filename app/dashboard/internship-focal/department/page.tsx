@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { CompanyFormDialog } from "@/components/features/internship/company-form-dialog";
 import { MouManageDialog } from "@/components/features/internship/mou-manage-dialog";
+import { AddSiteSupervisorDialog } from "@/components/features/internship/add-site-supervisor-dialog";
 import { BreakdownCard } from "@/components/features/reports/breakdown-card";
 import { mouEffectiveStatus } from "@/lib/utils/internship";
 
@@ -58,6 +59,23 @@ export default async function DepartmentInternshipFocalPage() {
     (mousByCompany.get(c.id) ?? []).some((m) => mouEffectiveStatus(m.status, m.mou_expiry_date) === "active"),
   ).length;
 
+  const { data: supervisorLinks } =
+    companyIds.length > 0
+      ? await supabase.from("internship_company_supervisors").select("company_id, supervisor_profile_id").in("company_id", companyIds)
+      : { data: [] };
+  const siteSupervisorProfileIds = [...new Set((supervisorLinks ?? []).map((l) => l.supervisor_profile_id))];
+  const { data: siteSupervisorProfiles } =
+    siteSupervisorProfileIds.length > 0
+      ? await supabase.from("profiles").select("id, full_name").in("id", siteSupervisorProfileIds)
+      : { data: [] };
+  const siteSupervisorNameById = new Map((siteSupervisorProfiles ?? []).map((p) => [p.id, p.full_name]));
+  const siteSupervisorsByCompany = new Map<string, string[]>();
+  for (const link of supervisorLinks ?? []) {
+    const list = siteSupervisorsByCompany.get(link.company_id) ?? [];
+    list.push(siteSupervisorNameById.get(link.supervisor_profile_id) ?? "—");
+    siteSupervisorsByCompany.set(link.company_id, list);
+  }
+
   // Overview stats: eligible students derived from every internship_configs
   // row for this department (same "match program+semester" logic
   // apply_for_internship() itself enforces), applications/assignments by
@@ -96,6 +114,15 @@ export default async function DepartmentInternshipFocalPage() {
   const reportStatusCounts = new Map<string, number>();
   for (const r of reports ?? []) reportStatusCounts.set(r.status, (reportStatusCounts.get(r.status) ?? 0) + 1);
 
+  const { data: attendanceRows } =
+    assignmentIds.length > 0 ? await supabase.from("internship_attendance").select("status").in("assignment_id", assignmentIds) : { data: [] };
+  const attendanceTotal = attendanceRows?.length ?? 0;
+  const attendancePresentEquivalent = (attendanceRows ?? []).reduce(
+    (sum, r) => sum + (r.status === "present" ? 1 : r.status === "half_day" ? 0.5 : 0),
+    0,
+  );
+  const averageAttendancePercent = attendanceTotal > 0 ? (attendancePresentEquivalent / attendanceTotal) * 100 : null;
+
   return (
     <div className="space-y-6">
       <Card>
@@ -118,6 +145,10 @@ export default async function DepartmentInternshipFocalPage() {
           <div>
             <p className="text-xl font-bold text-red-600">{overdueCount}</p>
             <p className="text-sm text-gray-500">Overdue Internships</p>
+          </div>
+          <div>
+            <p className="text-xl font-bold text-gray-900">{averageAttendancePercent === null ? "—" : `${averageAttendancePercent.toFixed(1)}%`}</p>
+            <p className="text-sm text-gray-500">Average Attendance</p>
           </div>
         </CardContent>
       </Card>
@@ -142,6 +173,7 @@ export default async function DepartmentInternshipFocalPage() {
               <TableHead>Seats</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>MoUs</TableHead>
+              <TableHead>Site Supervisors</TableHead>
               <TableHead>Action</TableHead>
             </TableRow>
           </TableHeader>
@@ -175,6 +207,15 @@ export default async function DepartmentInternshipFocalPage() {
                     }))}
                   />
                 </TableCell>
+                <TableCell className="text-sm">
+                  <div className="space-y-1">
+                    {(siteSupervisorsByCompany.get(c.id) ?? []).map((name, i) => (
+                      <p key={i}>{name}</p>
+                    ))}
+                    {(siteSupervisorsByCompany.get(c.id) ?? []).length === 0 && <p className="text-gray-400">None yet</p>}
+                    <AddSiteSupervisorDialog companyId={c.id} />
+                  </div>
+                </TableCell>
                 <TableCell>
                   <CompanyFormDialog
                     departmentId={departmentId}
@@ -198,7 +239,7 @@ export default async function DepartmentInternshipFocalPage() {
             ))}
             {(companies ?? []).length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="py-8 text-center text-gray-500">
+                <TableCell colSpan={8} className="py-8 text-center text-gray-500">
                   No companies added yet.
                 </TableCell>
               </TableRow>

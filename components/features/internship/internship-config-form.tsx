@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { setInternshipConfigAction } from "@/lib/actions/internship";
@@ -22,7 +23,18 @@ export type InternshipConfigEntry = {
   requiredReports: number;
   reportIntervalWeeks: number;
   allowCrossDepartmentSupervisor: boolean;
+  workingDays: number[];
 };
+
+const WEEKDAY_OPTIONS = [
+  { iso: 1, label: "Mon" },
+  { iso: 2, label: "Tue" },
+  { iso: 3, label: "Wed" },
+  { iso: 4, label: "Thu" },
+  { iso: 5, label: "Fri" },
+  { iso: 6, label: "Sat" },
+  { iso: 7, label: "Sun" },
+];
 
 const DEFAULT_CONFIG: InternshipConfigEntry = {
   isEnabled: false,
@@ -35,6 +47,7 @@ const DEFAULT_CONFIG: InternshipConfigEntry = {
   requiredReports: 3,
   reportIntervalWeeks: 3,
   allowCrossDepartmentSupervisor: false,
+  workingDays: [1, 2, 3, 4, 5],
 };
 
 export function InternshipConfigForm({
@@ -75,6 +88,7 @@ export function InternshipConfigForm({
     formData.set("requiredReports", String(form.requiredReports));
     formData.set("reportIntervalWeeks", String(form.reportIntervalWeeks));
     formData.set("allowCrossDepartmentSupervisor", String(form.allowCrossDepartmentSupervisor));
+    form.workingDays.forEach((d) => formData.append("workingDays", String(d)));
     startTransition(async () => {
       const result = await setInternshipConfigAction(formData);
       if (result?.error) toast.error(result.error);
@@ -209,6 +223,27 @@ export function InternshipConfigForm({
           disabled={isPending}
           rows={3}
         />
+      </div>
+
+      <div>
+        <Label className="mb-2 block text-xs">Working Days (for attendance)</Label>
+        <div className="flex flex-wrap gap-4">
+          {WEEKDAY_OPTIONS.map((w) => (
+            <label key={w.iso} className="flex items-center gap-1.5 text-sm">
+              <Checkbox
+                checked={form.workingDays.includes(w.iso)}
+                onCheckedChange={(checked) =>
+                  setForm({
+                    ...form,
+                    workingDays: checked ? [...form.workingDays, w.iso].sort((a, b) => a - b) : form.workingDays.filter((d) => d !== w.iso),
+                  })
+                }
+                disabled={isPending}
+              />
+              {w.label}
+            </label>
+          ))}
+        </div>
       </div>
 
       <div className="flex items-center justify-between rounded-lg border p-3">

@@ -26,6 +26,12 @@ export const USER_ROLES = [
   "directorate_admin",
   "jmc_admin",
   "college_admin",
+  // Internship workflow update — a person from the host organization/
+  // company where a student interns, distinct from the college's own
+  // "faculty" Academic Supervisor. Access is scoped entirely to their own
+  // assigned students via internship_assignments.site_supervisor_profile_id,
+  // never department/college-wide. See docs/MIGRATION_PLAN.md.
+  "site_supervisor",
 ] as const;
 
 export type UserRole = (typeof USER_ROLES)[number];
@@ -47,6 +53,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   directorate_admin: "Directorate Administrator",
   jmc_admin: "JMC Administrator",
   college_admin: "College Administrator",
+  site_supervisor: "Site Supervisor",
 };
 
 export const ROLE_DASHBOARD_PATH: Record<UserRole, string> = {
@@ -63,6 +70,7 @@ export const ROLE_DASHBOARD_PATH: Record<UserRole, string> = {
   directorate_admin: "/dashboard/directorate",
   jmc_admin: "/dashboard/jmc",
   college_admin: "/dashboard/college-admin",
+  site_supervisor: "/dashboard/site-supervisor",
 };
 
 /** Roles that may only be created by an admin through server-side provisioning — never via public self-registration. */
@@ -80,9 +88,16 @@ export const STAFF_ROLES = USER_ROLES.filter(
  * hierarchy-scoped actions (an hed_admin creates directorate_admin/
  * jmc_admin/college_admin; a directorate_admin creates jmc_admin; a
  * jmc_admin creates college_admin) — see lib/actions/provision-org-admin.ts.
+ *
+ * `site_supervisor` is excluded here too — it isn't provisioned through the
+ * generic admin/principal "Add Staff" dropdown at all, since it must always
+ * be linked to a specific host organization/company. It's provisioned
+ * exclusively by that company's Departmental Internship Focal Person via
+ * `provisionSiteSupervisorAction` (lib/actions/internship.ts).
  */
 export const COLLEGE_STAFF_ROLES = STAFF_ROLES.filter(
-  (r): r is Exclude<UserRole, "student" | (typeof ORG_ROLES)[number]> => !(ORG_ROLES as readonly UserRole[]).includes(r),
+  (r): r is Exclude<UserRole, "student" | (typeof ORG_ROLES)[number] | "site_supervisor"> =>
+    !(ORG_ROLES as readonly UserRole[]).includes(r) && r !== "site_supervisor",
 );
 
 export function isUserRole(value: string): value is UserRole {

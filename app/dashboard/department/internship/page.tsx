@@ -36,6 +36,7 @@ export default async function DepartmentInternshipPage() {
         requiredReports: c.required_reports,
         reportIntervalWeeks: c.report_interval_weeks,
         allowCrossDepartmentSupervisor: c.allow_cross_department_supervisor,
+        workingDays: c.working_days,
       },
     ]),
   );

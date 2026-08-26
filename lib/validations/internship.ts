@@ -1,4 +1,10 @@
 import { z } from "zod";
+import { SITE_SUPERVISOR_CRITERIA, ACADEMIC_REPORT_CRITERIA } from "@/lib/utils/internship";
+
+function scoresSchema(criteria: { key: string }[]) {
+  const shape = Object.fromEntries(criteria.map((c) => [c.key, z.coerce.number().int().min(1).max(5)]));
+  return z.object(shape);
+}
 
 export const MOU_STATUSES = ["draft", "active", "inactive"] as const;
 
@@ -16,6 +22,7 @@ export const internshipConfigSchema = z.object({
   requiredReports: z.coerce.number().int().positive(),
   reportIntervalWeeks: z.coerce.number().int().positive(),
   allowCrossDepartmentSupervisor: z.boolean(),
+  workingDays: z.array(z.coerce.number().int().min(1).max(7)).min(1, "Select at least one working day"),
 });
 
 export const internshipCompanySchema = z.object({
@@ -62,6 +69,7 @@ export const applyForInternshipSchema = z.object({
   configId: z.string().uuid(),
   companyId: z.string().uuid(),
   supervisorProfileId: z.string().uuid(),
+  siteSupervisorProfileId: z.string().uuid(),
 });
 
 export const respondToInternshipSupervisionSchema = z
@@ -75,9 +83,29 @@ export const respondToInternshipSupervisionSchema = z
     path: ["reason"],
   });
 
+export const respondToInternshipSiteSupervisionSchema = z
+  .object({
+    requestId: z.string().uuid(),
+    approve: z.boolean(),
+    reason: z.string().trim().max(1000).optional().or(z.literal("")),
+  })
+  .refine((v) => v.approve || (v.reason && v.reason.length > 0), {
+    message: "A reason is required when declining",
+    path: ["reason"],
+  });
+
+export const provisionSiteSupervisorSchema = z.object({
+  companyId: z.string().uuid(),
+  fullName: z.string().trim().min(2, "Enter a full name").max(200),
+  email: z.string().trim().min(1, "Email is required").email("Enter a valid email address"),
+  phone: z.string().trim().max(30).optional().or(z.literal("")),
+});
+
 export const submitInternshipReportSchema = z.object({
   reportId: z.string().uuid(),
-  content: z.string().trim().min(1, "Report content is required").max(20000),
+  tasksPerformed: z.string().trim().min(1, "Tasks performed is required").max(8000),
+  learningExperience: z.string().trim().min(1, "Learning experience is required").max(8000),
+  challenges: z.string().trim().min(1, "Challenges is required").max(8000),
   studentRemarks: z.string().trim().max(2000).optional().or(z.literal("")),
 });
 
@@ -86,11 +114,43 @@ export const reviewInternshipReportSchema = z
     reportId: z.string().uuid(),
     approve: z.boolean(),
     remarks: z.string().trim().max(2000).optional().or(z.literal("")),
+    scores: scoresSchema(ACADEMIC_REPORT_CRITERIA).optional(),
   })
   .refine((v) => v.approve || (v.remarks && v.remarks.length > 0), {
     message: "Remarks are required when rejecting",
     path: ["remarks"],
+  })
+  .refine((v) => !v.approve || v.scores, {
+    message: "Scores are required when approving",
+    path: ["scores"],
   });
+
+export const submitSiteSupervisorReportSectionSchema = z
+  .object({
+    reportId: z.string().uuid(),
+    approve: z.boolean(),
+    scores: scoresSchema(SITE_SUPERVISOR_CRITERIA).optional(),
+    remarks: z.string().trim().max(2000).optional().or(z.literal("")),
+  })
+  .refine((v) => v.approve || (v.remarks && v.remarks.length > 0), {
+    message: "Remarks are required when rejecting",
+    path: ["remarks"],
+  })
+  .refine((v) => !v.approve || v.scores, {
+    message: "Scores are required when approving",
+    path: ["scores"],
+  });
+
+export const updateInternshipActivityLogSchema = z.object({
+  assignmentId: z.string().uuid(),
+  weekNumber: z.coerce.number().int().positive(),
+  tasksPerformed: z.string().trim().max(4000).optional().or(z.literal("")),
+  hours: z.coerce.number().min(0).max(168).optional(),
+});
+
+export const signInternshipActivityLogSchema = z.object({
+  assignmentId: z.string().uuid(),
+});
 
 export const uploadInternshipReportDocumentSchema = z.object({
   reportId: z.string().uuid(),
@@ -113,4 +173,25 @@ export const submitInternshipEvaluationSchema = z.object({
 
 export const generateInternshipCertificateSchema = z.object({
   assignmentId: z.string().uuid(),
+});
+
+export const ATTENDANCE_STATUSES = ["present", "absent", "leave", "half_day"] as const;
+
+export const markInternshipAttendanceSchema = z.object({
+  assignmentId: z.string().uuid(),
+  entries: z
+    .array(z.object({ date: z.string().trim().min(1), status: z.enum(ATTENDANCE_STATUSES) }))
+    .min(1, "Mark at least one day"),
+});
+
+export const lockInternshipAttendanceWeekSchema = z.object({
+  assignmentId: z.string().uuid(),
+  weekStart: z.string().trim().min(1),
+  weekEnd: z.string().trim().min(1),
+});
+
+export const correctInternshipAttendanceSchema = z.object({
+  attendanceId: z.string().uuid(),
+  newStatus: z.enum(ATTENDANCE_STATUSES),
+  reason: z.string().trim().min(1, "A reason is required"),
 });

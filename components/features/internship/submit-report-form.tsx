@@ -9,8 +9,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { submitInternshipReportAction, uploadInternshipReportDocumentAction } from "@/lib/actions/internship";
 
-export function SubmitReportForm({ reportId, defaultContent }: { reportId: string; defaultContent?: string | null }) {
-  const [content, setContent] = useState(defaultContent ?? "");
+export function SubmitReportForm({
+  reportId,
+  defaultTasksPerformed,
+  defaultLearningExperience,
+  defaultChallenges,
+}: {
+  reportId: string;
+  defaultTasksPerformed?: string | null;
+  defaultLearningExperience?: string | null;
+  defaultChallenges?: string | null;
+}) {
+  const [tasksPerformed, setTasksPerformed] = useState(defaultTasksPerformed ?? "");
+  const [learningExperience, setLearningExperience] = useState(defaultLearningExperience ?? "");
+  const [challenges, setChallenges] = useState(defaultChallenges ?? "");
   const [remarks, setRemarks] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
@@ -18,8 +30,8 @@ export function SubmitReportForm({ reportId, defaultContent }: { reportId: strin
 
   const submit = () => {
     setError("");
-    if (!content.trim()) {
-      setError("Report content is required");
+    if (!tasksPerformed.trim() || !learningExperience.trim() || !challenges.trim()) {
+      setError("Tasks performed, learning experience, and challenges are all required");
       return;
     }
     startTransition(async () => {
@@ -35,7 +47,9 @@ export function SubmitReportForm({ reportId, defaultContent }: { reportId: strin
       }
       const formData = new FormData();
       formData.set("reportId", reportId);
-      formData.set("content", content);
+      formData.set("tasksPerformed", tasksPerformed);
+      formData.set("learningExperience", learningExperience);
+      formData.set("challenges", challenges);
       formData.set("studentRemarks", remarks);
       const result = await submitInternshipReportAction(formData);
       if (result?.error) setError(result.error);
@@ -47,8 +61,16 @@ export function SubmitReportForm({ reportId, defaultContent }: { reportId: strin
     <div className="space-y-3 rounded-lg border p-4">
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div>
-        <Label htmlFor={`content-${reportId}`}>Report Content *</Label>
-        <Textarea id={`content-${reportId}`} value={content} onChange={(e) => setContent(e.target.value)} disabled={isPending} rows={5} />
+        <Label htmlFor={`tasks-${reportId}`}>Tasks Performed *</Label>
+        <Textarea id={`tasks-${reportId}`} value={tasksPerformed} onChange={(e) => setTasksPerformed(e.target.value)} disabled={isPending} rows={3} />
+      </div>
+      <div>
+        <Label htmlFor={`learning-${reportId}`}>Learning Experience *</Label>
+        <Textarea id={`learning-${reportId}`} value={learningExperience} onChange={(e) => setLearningExperience(e.target.value)} disabled={isPending} rows={3} />
+      </div>
+      <div>
+        <Label htmlFor={`challenges-${reportId}`}>Challenges *</Label>
+        <Textarea id={`challenges-${reportId}`} value={challenges} onChange={(e) => setChallenges(e.target.value)} disabled={isPending} rows={3} />
       </div>
       <div>
         <Label htmlFor={`remarks-${reportId}`}>Remarks (optional)</Label>

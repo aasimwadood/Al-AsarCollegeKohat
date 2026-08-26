@@ -13,13 +13,23 @@ import {
   respondToInternshipSupervisionSchema,
   submitInternshipReportSchema,
   reviewInternshipReportSchema,
+  submitSiteSupervisorReportSectionSchema,
   setInternshipReportEarlySubmissionSchema,
   submitInternshipEvaluationSchema,
   generateInternshipCertificateSchema,
+  respondToInternshipSiteSupervisionSchema,
+  provisionSiteSupervisorSchema,
+  markInternshipAttendanceSchema,
+  lockInternshipAttendanceWeekSchema,
+  correctInternshipAttendanceSchema,
+  updateInternshipActivityLogSchema,
+  signInternshipActivityLogSchema,
 } from "@/lib/validations/internship";
 import type { ActionResult } from "@/lib/actions/auth";
 import { getSignedUrl } from "@/lib/supabase/storage";
 import { logAudit } from "@/lib/actions/audit";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { generateUniqueUsername } from "@/lib/utils/username";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
 
@@ -82,6 +92,7 @@ export async function setInternshipConfigAction(formData: FormData): Promise<Act
     requiredReports: formData.get("requiredReports"),
     reportIntervalWeeks: formData.get("reportIntervalWeeks"),
     allowCrossDepartmentSupervisor: formData.get("allowCrossDepartmentSupervisor") === "true",
+    workingDays: formData.getAll("workingDays"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
 
@@ -107,6 +118,7 @@ export async function setInternshipConfigAction(formData: FormData): Promise<Act
         required_reports: parsed.data.requiredReports,
         report_interval_weeks: parsed.data.reportIntervalWeeks,
         allow_cross_department_supervisor: parsed.data.allowCrossDepartmentSupervisor,
+        working_days: parsed.data.workingDays,
         updated_by: profile.id,
       },
       { onConflict: "department_id,program_id,semester_id" },
@@ -358,6 +370,7 @@ export async function applyForInternshipAction(formData: FormData): Promise<Acti
     configId: formData.get("configId"),
     companyId: formData.get("companyId"),
     supervisorProfileId: formData.get("supervisorProfileId"),
+    siteSupervisorProfileId: formData.get("siteSupervisorProfileId"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
 
@@ -366,6 +379,7 @@ export async function applyForInternshipAction(formData: FormData): Promise<Acti
     p_config_id: parsed.data.configId,
     p_company_id: parsed.data.companyId,
     p_supervisor_profile_id: parsed.data.supervisorProfileId,
+    p_site_supervisor_profile_id: parsed.data.siteSupervisorProfileId,
   });
   if (error) return { error: error.message };
 
@@ -378,7 +392,9 @@ export async function submitInternshipReportAction(formData: FormData): Promise<
 
   const parsed = submitInternshipReportSchema.safeParse({
     reportId: formData.get("reportId"),
-    content: formData.get("content"),
+    tasksPerformed: formData.get("tasksPerformed"),
+    learningExperience: formData.get("learningExperience"),
+    challenges: formData.get("challenges"),
     studentRemarks: formData.get("studentRemarks"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -386,7 +402,9 @@ export async function submitInternshipReportAction(formData: FormData): Promise<
   const supabase = await createClient();
   const { error } = await supabase.rpc("submit_internship_report", {
     p_report_id: parsed.data.reportId,
-    p_content: parsed.data.content,
+    p_tasks_performed: parsed.data.tasksPerformed,
+    p_learning_experience: parsed.data.learningExperience,
+    p_challenges: parsed.data.challenges,
     p_student_remarks: parsed.data.studentRemarks || null,
   });
   if (error) return { error: error.message };
@@ -427,6 +445,16 @@ export async function getInternshipReportDocumentUrlAction(reportId: string): Pr
   return getSignedUrl("internship-report-documents", report.document_path);
 }
 
+function parseScoresField(formData: FormData): unknown {
+  const raw = formData.get("scores");
+  if (typeof raw !== "string" || !raw) return undefined;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+}
+
 export async function reviewInternshipReportAction(formData: FormData): Promise<ActionResult> {
   await requireRole("faculty");
 
@@ -434,6 +462,7 @@ export async function reviewInternshipReportAction(formData: FormData): Promise<
     reportId: formData.get("reportId"),
     approve: formData.get("approve") === "true",
     remarks: formData.get("remarks"),
+    scores: parseScoresField(formData),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
 
@@ -442,6 +471,73 @@ export async function reviewInternshipReportAction(formData: FormData): Promise<
     p_report_id: parsed.data.reportId,
     p_approve: parsed.data.approve,
     p_remarks: parsed.data.remarks || null,
+    p_scores: parsed.data.scores ?? null,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard", "layout");
+  return {};
+}
+
+export async function submitSiteSupervisorReportSectionAction(formData: FormData): Promise<ActionResult> {
+  await requireRole("site_supervisor");
+
+  const parsed = submitSiteSupervisorReportSectionSchema.safeParse({
+    reportId: formData.get("reportId"),
+    approve: formData.get("approve") === "true",
+    scores: parseScoresField(formData),
+    remarks: formData.get("remarks"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("submit_site_supervisor_report_section", {
+    p_report_id: parsed.data.reportId,
+    p_approve: parsed.data.approve,
+    p_scores: parsed.data.scores ?? null,
+    p_remarks: parsed.data.remarks || null,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard", "layout");
+  return {};
+}
+
+export async function updateInternshipActivityLogAction(formData: FormData): Promise<ActionResult> {
+  await requireRole("student");
+
+  const parsed = updateInternshipActivityLogSchema.safeParse({
+    assignmentId: formData.get("assignmentId"),
+    weekNumber: formData.get("weekNumber"),
+    tasksPerformed: formData.get("tasksPerformed"),
+    hours: formData.get("hours") || undefined,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("update_internship_activity_log", {
+    p_assignment_id: parsed.data.assignmentId,
+    p_week_number: parsed.data.weekNumber,
+    p_tasks_performed: parsed.data.tasksPerformed || null,
+    p_hours: parsed.data.hours ?? null,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard", "layout");
+  return {};
+}
+
+export async function signInternshipActivityLogAction(formData: FormData): Promise<ActionResult> {
+  await requireRole("student", "site_supervisor", "faculty");
+
+  const parsed = signInternshipActivityLogSchema.safeParse({
+    assignmentId: formData.get("assignmentId"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("sign_internship_activity_log", {
+    p_assignment_id: parsed.data.assignmentId,
   });
   if (error) return { error: error.message };
 
@@ -526,6 +622,163 @@ export async function respondToInternshipSupervisionAction(formData: FormData): 
     p_request_id: parsed.data.requestId,
     p_approve: parsed.data.approve,
     p_reason: parsed.data.reason || null,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard", "layout");
+  return {};
+}
+
+export async function respondToInternshipSiteSupervisionAction(formData: FormData): Promise<ActionResult> {
+  await requireRole("site_supervisor");
+
+  const parsed = respondToInternshipSiteSupervisionSchema.safeParse({
+    requestId: formData.get("requestId"),
+    approve: formData.get("approve") === "true",
+    reason: formData.get("reason"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("respond_to_internship_site_supervision", {
+    p_request_id: parsed.data.requestId,
+    p_approve: parsed.data.approve,
+    p_reason: parsed.data.reason || null,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard", "layout");
+  return {};
+}
+
+export type ProvisionSiteSupervisorResult = { error: string; username?: undefined } | { error?: undefined; username: string };
+
+/**
+ * Creates a Site Supervisor account linked to a specific host organization.
+ * A direct structural copy of provisionStaffAction (lib/actions/
+ * provision-staff.ts) — invite-by-email, then overwrite the trigger-created
+ * default 'student' profile with the real role/department — except the
+ * caller must be that company's own Departmental Internship Focal Person
+ * (or admin), not a blanket admin/principal, and the new profile is also
+ * linked to the company via internship_company_supervisors in the same
+ * call.
+ */
+export async function provisionSiteSupervisorAction(formData: FormData): Promise<ProvisionSiteSupervisorResult> {
+  const profile = await requireRole(...INTERNSHIP_MANAGER_ROLES);
+
+  const parsed = provisionSiteSupervisorSchema.safeParse({
+    companyId: formData.get("companyId"),
+    fullName: formData.get("fullName"),
+    email: formData.get("email"),
+    phone: formData.get("phone"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const supabase = await createClient();
+  const { data: company } = await supabase
+    .from("internship_companies")
+    .select("id, department_id, name")
+    .eq("id", parsed.data.companyId)
+    .single();
+  if (!company) return { error: "Company not found" };
+
+  const gateError = await requireDepartmentalFocalOrAdmin(supabase, profile, company.department_id);
+  if (gateError) return { error: gateError };
+
+  const { fullName, email, phone } = parsed.data;
+  const username = await generateUniqueUsername(fullName);
+  const admin = createAdminClient();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+  const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+    data: { full_name: fullName, username },
+    redirectTo: `${siteUrl}/auth/callback?next=/update-password`,
+  });
+  if (inviteError || !invited.user) {
+    return { error: inviteError?.message ?? "Could not invite user" };
+  }
+
+  const { error: profileError } = await admin
+    .from("profiles")
+    .update({ role: "site_supervisor", department_id: company.department_id, phone: phone || null })
+    .eq("id", invited.user.id);
+  if (profileError) return { error: profileError.message };
+
+  const { error: linkError } = await admin
+    .from("internship_company_supervisors")
+    .insert({ company_id: company.id, supervisor_profile_id: invited.user.id });
+  if (linkError) return { error: linkError.message };
+
+  await logAudit(profile.id, "provision_site_supervisor", "profiles", invited.user.id, { email, username, companyName: company.name });
+  revalidatePath("/dashboard", "layout");
+  return { username };
+}
+
+export async function markInternshipAttendanceAction(formData: FormData): Promise<ActionResult> {
+  await requireRole("site_supervisor");
+
+  const entriesRaw = formData.get("entries");
+  let entries: unknown;
+  try {
+    entries = JSON.parse(typeof entriesRaw === "string" ? entriesRaw : "[]");
+  } catch {
+    return { error: "Invalid input" };
+  }
+
+  const parsed = markInternshipAttendanceSchema.safeParse({
+    assignmentId: formData.get("assignmentId"),
+    entries,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("mark_internship_attendance", {
+    p_assignment_id: parsed.data.assignmentId,
+    p_entries: parsed.data.entries,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard", "layout");
+  return {};
+}
+
+export async function lockInternshipAttendanceWeekAction(formData: FormData): Promise<ActionResult> {
+  await requireRole("site_supervisor");
+
+  const parsed = lockInternshipAttendanceWeekSchema.safeParse({
+    assignmentId: formData.get("assignmentId"),
+    weekStart: formData.get("weekStart"),
+    weekEnd: formData.get("weekEnd"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("lock_internship_attendance_week", {
+    p_assignment_id: parsed.data.assignmentId,
+    p_week_start: parsed.data.weekStart,
+    p_week_end: parsed.data.weekEnd,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard", "layout");
+  return {};
+}
+
+export async function correctInternshipAttendanceAction(formData: FormData): Promise<ActionResult> {
+  await requireRole(...INTERNSHIP_MANAGER_ROLES);
+
+  const parsed = correctInternshipAttendanceSchema.safeParse({
+    attendanceId: formData.get("attendanceId"),
+    newStatus: formData.get("newStatus"),
+    reason: formData.get("reason"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("correct_internship_attendance", {
+    p_attendance_id: parsed.data.attendanceId,
+    p_new_status: parsed.data.newStatus,
+    p_reason: parsed.data.reason,
   });
   if (error) return { error: error.message };
 

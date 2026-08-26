@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { RespondInternshipButtons } from "@/components/features/internship/respond-internship-buttons";
 import { ReviewReportButtons } from "@/components/features/internship/review-report-buttons";
 import { EvaluationForm } from "@/components/features/internship/evaluation-form";
+import { ActivityLogPanel } from "@/components/features/internship/activity-log-panel";
 import { BreakdownCard } from "@/components/features/reports/breakdown-card";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -55,10 +56,38 @@ export default async function FacultyInternshipPage() {
       : { data: [] };
   const reportsByAssignment = new Map<string, { id: string; report_number: number }[]>();
   for (const r of allReports ?? []) {
-    if (r.status !== "submitted") continue;
+    if (r.status !== "site_supervisor_submitted") continue;
     const list = reportsByAssignment.get(r.assignment_id) ?? [];
     list.push(r);
     reportsByAssignment.set(r.assignment_id, list);
+  }
+
+  const { data: attendanceRows } =
+    activeAssignmentIds.length > 0
+      ? await supabase.from("internship_attendance").select("assignment_id, status").in("assignment_id", activeAssignmentIds)
+      : { data: [] };
+  const attendancePercentByAssignment = new Map<string, number>();
+  const byAssignment = new Map<string, { present: number; halfDay: number; total: number }>();
+  for (const r of attendanceRows ?? []) {
+    const entry = byAssignment.get(r.assignment_id) ?? { present: 0, halfDay: 0, total: 0 };
+    entry.total += 1;
+    if (r.status === "present") entry.present += 1;
+    if (r.status === "half_day") entry.halfDay += 1;
+    byAssignment.set(r.assignment_id, entry);
+  }
+  for (const [assignmentId, entry] of byAssignment) {
+    attendancePercentByAssignment.set(assignmentId, entry.total > 0 ? ((entry.present + entry.halfDay * 0.5) / entry.total) * 100 : 0);
+  }
+
+  const { data: activityLogRows } =
+    activeAssignmentIds.length > 0
+      ? await supabase.from("internship_activity_logs").select("assignment_id, week_number, tasks_performed, hours").in("assignment_id", activeAssignmentIds)
+      : { data: [] };
+  const activityLogByAssignment = new Map<string, { week_number: number; tasks_performed: string | null; hours: number | null }[]>();
+  for (const row of activityLogRows ?? []) {
+    const list = activityLogByAssignment.get(row.assignment_id) ?? [];
+    list.push(row);
+    activityLogByAssignment.set(row.assignment_id, list);
   }
 
   const assignmentStatusCounts = new Map<string, number>();
@@ -114,6 +143,9 @@ export default async function FacultyInternshipPage() {
                     <p className="text-sm text-gray-500">
                       {companyNames.get(a.company_id) ?? "—"} — {a.start_date ?? "—"} to {a.end_date ?? "—"}
                     </p>
+                    {attendancePercentByAssignment.has(a.id) && (
+                      <p className="text-xs text-gray-400">Attendance: {attendancePercentByAssignment.get(a.id)!.toFixed(1)}%</p>
+                    )}
                   </div>
                   <Badge variant="secondary">{STATUS_LABELS[a.status] ?? a.status}</Badge>
                 </div>
@@ -125,6 +157,20 @@ export default async function FacultyInternshipPage() {
                         <ReviewReportButtons reportId={r.id} />
                       </div>
                     ))}
+                  </div>
+                )}
+                {(a.status === "assigned" || a.status === "in_progress" || a.status === "completion_pending") && (
+                  <div className="border-t pt-3">
+                    <p className="mb-2 text-sm font-medium text-gray-700">Activity Log</p>
+                    <ActivityLogPanel
+                      assignmentId={a.id}
+                      durationWeeks={a.duration_weeks}
+                      existing={activityLogByAssignment.get(a.id) ?? []}
+                      viewerRole="faculty"
+                      studentSignedAt={a.activity_log_student_signed_at}
+                      siteSupervisorSignedAt={a.activity_log_site_supervisor_signed_at}
+                      academicSignedAt={a.activity_log_academic_signed_at}
+                    />
                   </div>
                 )}
                 {a.status === "completion_pending" && (
