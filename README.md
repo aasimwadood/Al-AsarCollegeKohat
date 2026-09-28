@@ -1,4 +1,4 @@
-# GPGC Kohat
+# AL-Asar College Kohat
 
 A university management system originally built for Government Postgraduate College Kohat, now a multi-college platform — a public site per college, admissions, academics, recruitment/appointment workflows, and 8 role-specific dashboards (Student, Faculty, Department/HoD, Admin, Controller of Examinations, Coordinator, Principal, Administration).
 
