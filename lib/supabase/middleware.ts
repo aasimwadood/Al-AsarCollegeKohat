@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { supabaseUrl, supabasePublishableKey } from "@/lib/supabase/env";
 
 const PROTECTED_PREFIX = "/dashboard";
 const AUTH_PAGES = ["/login", "/register"];
@@ -15,8 +16,8 @@ export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl(),
+    supabasePublishableKey(),
     {
       cookies: {
         getAll() {
