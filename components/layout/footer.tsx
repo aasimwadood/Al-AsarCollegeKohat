@@ -2,11 +2,11 @@ import Link from "next/link";
 import { Mail, Phone, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
-const DEFAULT_FOOTER = {
-  location: "Main Campus, University Road, Kohat",
-  phone_no: "+92-123-4567890",
-  email: "info@gpgckohat.edu.pk",
-  copyright: "GPGC Kohat. All rights reserved.",
+const DEFAULT_FOOTER: { location: string | null; phone_no: string | null; email: string | null; copyright: string | null } = {
+  location: null,
+  phone_no: null,
+  email: null,
+  copyright: null,
 };
 
 export async function Footer({

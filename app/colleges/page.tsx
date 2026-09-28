@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Building2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Header } from "@/components/layout/header";
@@ -10,6 +11,8 @@ import { listActiveColleges } from "@/lib/services/colleges";
 export const metadata: Metadata = { title: "Our Colleges" };
 
 export default async function CollegesDirectoryPage() {
+  // See app/college/[slug]/layout.tsx.
+  if (process.env.ENABLE_MULTI_COLLEGE_SITES !== "true") redirect("/");
   const profile = await getCurrentProfile();
   const colleges = await listActiveColleges();
 

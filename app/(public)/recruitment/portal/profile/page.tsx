@@ -17,7 +17,7 @@ export default async function ApplicantProfilePage() {
 
   return (
     <div className="max-w-lg space-y-4">
-      <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
+      <h1 className="text-2xl font-bold text-forest-900">Profile</h1>
       <ApplicantProfileForm
         initial={{
           fullName: profile?.full_name ?? "",

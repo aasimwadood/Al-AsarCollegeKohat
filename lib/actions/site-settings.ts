@@ -15,5 +15,7 @@ export async function saveSiteSettingAction(key: string, value: string, collegeI
   if (error) return { error: error.message };
 
   revalidatePath("/dashboard/admin/settings");
+  // Public site reads these keys (lib/site/data.ts).
+  revalidatePath("/", "layout");
   return {};
 }

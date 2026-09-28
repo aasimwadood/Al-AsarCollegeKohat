@@ -167,7 +167,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     ? (await supabase.from("academic_sessions").select("label").eq("id", academicSessionId).single()).data?.label
     : null;
 
-  const logoDataUri = await loadLogoDataUri(college?.logo_path ?? "/images/logo.png");
+  const logoDataUri = await loadLogoDataUri(college?.logo_path ?? "/brand/al-asar-mark.png");
 
   const outstandingItems = (pendingFees ?? []).map((f) => ({
     label: `${f.fee_type.charAt(0).toUpperCase()}${f.fee_type.slice(1)} Fee`,
@@ -175,7 +175,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }));
 
   const data: VoucherPdfData = {
-    collegeName: college?.name ?? "GPGC Kohat",
+    collegeName: college?.name ?? "Al-Asar Degree College",
     logoDataUri,
     voucherNumber: voucher.voucher_number,
     status: voucher.status,

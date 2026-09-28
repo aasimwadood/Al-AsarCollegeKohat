@@ -35,6 +35,7 @@ const NAVIGATION_BY_ROLE: Partial<Record<CurrentProfile["role"], DashboardNavIte
     { name: "Announcements", icon: "FileText", href: "/dashboard/admin/announcements", resource: "announcements" },
     { name: "Recruitment", icon: "UserPlus", href: "/dashboard/recruitment", resource: "recruitment" },
     { name: "Reports", icon: "TrendingUp", href: "/dashboard/admin/reports" },
+    { name: "Website News", icon: "Bell", href: "/dashboard/admin/website-news", resource: "siteContent" },
     { name: "System Settings", icon: "Settings", href: "/dashboard/admin/settings", resource: "siteContent" },
     { name: "System Logs", icon: "Activity", href: "/dashboard/admin/logs", resource: "auditLog" },
   ],

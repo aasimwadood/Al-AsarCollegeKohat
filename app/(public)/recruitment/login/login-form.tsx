@@ -67,11 +67,11 @@ export function ApplicantLoginForm({ redirectTo }: { redirectTo?: string }) {
       <div className="mt-6 text-center text-sm">
         <p className="mb-2 text-gray-600">
           New applicant?{" "}
-          <Link href={`/recruitment/register${redirectTo ? `?redirectTo=${redirectTo}` : ""}`} className="text-blue-600 hover:underline">
+          <Link href={`/recruitment/register${redirectTo ? `?redirectTo=${redirectTo}` : ""}`} className="text-brass-700 hover:underline">
             Create an account
           </Link>
         </p>
-        <Link href="/recruitment" className="text-blue-600 hover:underline">
+        <Link href="/recruitment" className="text-brass-700 hover:underline">
           ← Back to Openings
         </Link>
       </div>

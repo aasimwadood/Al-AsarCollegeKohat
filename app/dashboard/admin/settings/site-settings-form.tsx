@@ -13,7 +13,7 @@ export function SiteSettingsForm({
   values,
   collegeId,
 }: {
-  fields: { key: string; label: string }[];
+  fields: { key: string; label: string; multiline?: boolean; hint?: string }[];
   values: Record<string, string>;
   collegeId: string;
 }) {
@@ -22,7 +22,9 @@ export function SiteSettingsForm({
 
   const saveAll = () => {
     startTransition(async () => {
+      // Only write fields that changed, so untouched keys are never created empty.
       for (const field of fields) {
+        if ((state[field.key] ?? "") === (values[field.key] ?? "")) continue;
         const result = await saveSiteSettingAction(field.key, state[field.key] ?? "", collegeId);
         if (result?.error) {
           toast.error(`${field.label}: ${result.error}`);
@@ -43,8 +45,14 @@ export function SiteSettingsForm({
             value={state[field.key] ?? ""}
             onChange={(e) => setState((prev) => ({ ...prev, [field.key]: e.target.value }))}
             disabled={isPending}
-            rows={field.key.includes("Message") || field.key === "AboutUs" ? 3 : 1}
+            rows={field.multiline ? 3 : 1}
+            aria-describedby={field.hint ? `${field.key}-hint` : undefined}
           />
+          {field.hint && (
+            <p id={`${field.key}-hint`} className="mt-1 text-xs text-muted-foreground">
+              {field.hint}
+            </p>
+          )}
         </div>
       ))}
       <Button onClick={saveAll} disabled={isPending}>

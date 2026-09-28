@@ -72,11 +72,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ass
     : { data: null };
   const { data: college } = await supabase.from("colleges").select("name, logo_path").eq("id", department.college_id).single();
 
-  const logoDataUri = await loadLogoDataUri(college?.logo_path ?? "/images/logo.png");
+  const logoDataUri = await loadLogoDataUri(college?.logo_path ?? "/brand/al-asar-mark.png");
   const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—");
 
   const data: CertificatePdfData = {
-    collegeName: college?.name ?? "GPGC Kohat",
+    collegeName: college?.name ?? "Al-Asar Degree College",
     logoDataUri,
     certificateNumber: certificate.certificate_number,
     studentName: student.full_name,

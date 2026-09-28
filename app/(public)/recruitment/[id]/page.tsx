@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentApplicant } from "@/lib/auth/applicant-session";
+import { getSiteCollege } from "@/lib/site/data";
 
 export const metadata: Metadata = { title: "Recruitment Advertisement" };
 
@@ -19,7 +20,8 @@ export default async function RecruitmentAdvertisementPage({ params }: { params:
     .eq("id", id)
     .single();
 
-  if (!ad || ad.status === "draft") notFound();
+  const siteCollege = await getSiteCollege();
+  if (!ad || ad.status === "draft" || ad.college_id !== siteCollege?.id) notFound();
 
   const { data: college } = await supabase.from("colleges").select("name").eq("id", ad.college_id).single();
 
@@ -45,7 +47,7 @@ export default async function RecruitmentAdvertisementPage({ params }: { params:
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
-      <Link href="/recruitment" className="mb-4 inline-block text-sm text-blue-600 hover:underline">
+      <Link href="/recruitment" className="mb-4 inline-block text-sm text-brass-700 hover:underline">
         ← All Openings
       </Link>
 

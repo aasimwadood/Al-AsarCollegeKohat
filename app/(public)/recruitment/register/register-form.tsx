@@ -88,11 +88,11 @@ export function ApplicantRegisterForm({ redirectTo }: { redirectTo?: string }) {
       <div className="mt-6 text-center text-sm">
         <p className="mb-2 text-gray-600">
           Already have an account?{" "}
-          <Link href={`/recruitment/login${redirectTo ? `?redirectTo=${redirectTo}` : ""}`} className="text-blue-600 hover:underline">
+          <Link href={`/recruitment/login${redirectTo ? `?redirectTo=${redirectTo}` : ""}`} className="text-brass-700 hover:underline">
             Sign in
           </Link>
         </p>
-        <Link href="/recruitment" className="text-blue-600 hover:underline">
+        <Link href="/recruitment" className="text-brass-700 hover:underline">
           ← Back to Openings
         </Link>
       </div>

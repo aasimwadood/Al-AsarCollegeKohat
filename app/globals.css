@@ -10,14 +10,14 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: #030213;
+  --primary: #1e3f2f;
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.95 0.0058 264.53);
-  --secondary-foreground: #030213;
+  --secondary-foreground: #163024;
   --muted: #ececf0;
   --muted-foreground: #717182;
   --accent: #e9ebef;
-  --accent-foreground: #030213;
+  --accent-foreground: #163024;
   --destructive: #d4183d;
   --destructive-foreground: #ffffff;
   --border: rgba(0, 0, 0, 0.1);
@@ -26,7 +26,7 @@
   --switch-background: #cbced4;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: oklch(0.708 0 0);
+  --ring: #9a6f22;
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -35,12 +35,39 @@
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #030213;
+  --sidebar-primary: #1e3f2f;
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+}
+
+/* ---------------------------------------------------------------------------
+ * Al-Asar Degree College — brand tokens.
+ * Forest green (the green hills around the campus), sandstone (the college's
+ * own building stone) and brass (institutional accent). Change the palette
+ * here; every public-site component reads these variables.
+ * ------------------------------------------------------------------------- */
+:root {
+  --aa-forest-950: #0e1d16;
+  --aa-forest-900: #163024;
+  --aa-forest-800: #1e3f2f;
+  --aa-forest-700: #2a5540;
+  --aa-forest-600: #3a6e53;
+  --aa-forest-100: #e3ebe4;
+  --aa-sand-50: #fbf8f2;
+  --aa-sand-100: #f4eee2;
+  --aa-sand-200: #e9dfcc;
+  --aa-sand-300: #d6c6a6;
+  --aa-brass-400: #d2a85a; /* decorative / text on dark backgrounds only */
+  --aa-brass-500: #b98a36; /* decorative rules and icons */
+  --aa-brass-700: #7a5614; /* text on light backgrounds (AA contrast) */
+  --aa-ink: #1b211d;
+  --aa-ink-muted: #4a544e;
+  --aa-line: #ddd3bf;
+  --aa-clay-700: #8f3a26; /* serious notices: anti-ragging, offences */
+  --aa-clay-50: #f8ece7;
 }
 
 .dark {
@@ -81,6 +108,26 @@
 }
 
 @theme inline {
+  --color-forest-950: var(--aa-forest-950);
+  --color-forest-900: var(--aa-forest-900);
+  --color-forest-800: var(--aa-forest-800);
+  --color-forest-700: var(--aa-forest-700);
+  --color-forest-600: var(--aa-forest-600);
+  --color-forest-100: var(--aa-forest-100);
+  --color-sand-50: var(--aa-sand-50);
+  --color-sand-100: var(--aa-sand-100);
+  --color-sand-200: var(--aa-sand-200);
+  --color-sand-300: var(--aa-sand-300);
+  --color-brass-400: var(--aa-brass-400);
+  --color-brass-500: var(--aa-brass-500);
+  --color-brass-700: var(--aa-brass-700);
+  --color-ink: var(--aa-ink);
+  --color-ink-muted: var(--aa-ink-muted);
+  --color-line: var(--aa-line);
+  --color-clay-700: var(--aa-clay-700);
+  --color-clay-50: var(--aa-clay-50);
+  --font-display: var(--font-aa-display), "Source Serif 4", Georgia, serif;
+  --font-sans: var(--font-aa-sans), "IBM Plex Sans", system-ui, sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -199,5 +246,92 @@ html {
   }
   .print\:p-4 {
     padding: 1rem;
+  }
+}
+/* ---------------------------------------------------------------------------
+ * Al-Asar public-site primitives
+ * ------------------------------------------------------------------------- */
+@layer components {
+  /* Arch frame — echoes the arched verandas of the campus buildings. */
+  .aa-arch {
+    border-radius: 999px 999px 0.375rem 0.375rem;
+    overflow: hidden;
+  }
+  .aa-arch-sm {
+    border-radius: 12rem 12rem 0.25rem 0.25rem;
+    overflow: hidden;
+  }
+  /* Eyebrow label with a short brass rule. */
+  .aa-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--aa-brass-700);
+  }
+  .aa-eyebrow::before {
+    content: "";
+    width: 2rem;
+    height: 1px;
+    background: currentColor;
+  }
+  .aa-eyebrow-light {
+    color: var(--aa-brass-400);
+  }
+  /* Double hairline used between editorial sections. */
+  .aa-double-rule {
+    border-top: 1px solid var(--aa-line);
+    box-shadow: 0 3px 0 -2px var(--aa-line);
+  }
+  /* Faint geometric lattice (jali) for dark bands. */
+  .aa-lattice {
+    background-image:
+      linear-gradient(45deg, rgb(255 255 255 / 0.035) 25%, transparent 25%, transparent 75%, rgb(255 255 255 / 0.035) 75%),
+      linear-gradient(45deg, rgb(255 255 255 / 0.035) 25%, transparent 25%, transparent 75%, rgb(255 255 255 / 0.035) 75%);
+    background-size: 28px 28px;
+    background-position: 0 0, 14px 14px;
+  }
+  /* Long-form reading copy (messages, history, policy prose). */
+  .aa-prose > p {
+    font-size: 1.0625rem;
+    line-height: 1.8;
+    color: var(--aa-ink);
+  }
+  .aa-prose > p + p {
+    margin-top: 1.1rem;
+  }
+  .aa-focus:focus-visible,
+  .aa-site a:focus-visible,
+  .aa-site button:focus-visible,
+  .aa-site summary:focus-visible,
+  .aa-site [role="tab"]:focus-visible {
+    outline: 2px solid var(--aa-brass-500);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+}
+
+/* Restrained scroll reveal: progressive enhancement, no JavaScript, and
+ * switched off entirely for visitors who prefer reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .aa-reveal {
+      animation: aa-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 35%;
+    }
+  }
+}
+@keyframes aa-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }

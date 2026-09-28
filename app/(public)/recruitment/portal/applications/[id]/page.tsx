@@ -64,7 +64,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
 
   return (
     <div className="space-y-6">
-      <Link href="/recruitment/portal" className="text-sm text-blue-600 hover:underline">
+      <Link href="/recruitment/portal" className="text-sm text-brass-700 hover:underline">
         ← My Applications
       </Link>
 
@@ -88,7 +88,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                 <span
                   key={step}
                   className={`rounded px-2 py-0.5 text-xs capitalize ${
-                    i <= stepIndex ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-400"
+                    i <= stepIndex ? "bg-forest-100 text-forest-800" : "bg-gray-100 text-gray-400"
                   }`}
                 >
                   {step.replace(/_/g, " ")}

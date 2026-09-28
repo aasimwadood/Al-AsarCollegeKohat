@@ -63,7 +63,7 @@ export function BankAccountForm({
           </div>
           <div>
             <Label htmlFor="accountTitle">Account Title</Label>
-            <Input id="accountTitle" name="accountTitle" defaultValue={initial?.accountTitle ?? ""} placeholder="e.g. Principal GPGC Kohat" disabled={isPending} />
+            <Input id="accountTitle" name="accountTitle" defaultValue={initial?.accountTitle ?? ""} placeholder="e.g. Principal Al-Asar Degree College" disabled={isPending} />
           </div>
           <div>
             <Label htmlFor="accountNumber">Account Number *</Label>

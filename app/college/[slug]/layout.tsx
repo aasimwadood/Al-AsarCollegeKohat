@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { getCurrentProfile } from "@/lib/auth/session";
@@ -12,6 +12,9 @@ export default async function CollegeLayout({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  // This deployment is Al-Asar Degree College's own site; the network-wide
+  // multi-college public pages stay available only when explicitly enabled.
+  if (process.env.ENABLE_MULTI_COLLEGE_SITES !== "true") redirect("/");
   const college = await getCollegeBySlug(slug);
   if (!college) notFound();
 

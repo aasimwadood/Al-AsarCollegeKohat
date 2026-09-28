@@ -4,17 +4,28 @@ import { Briefcase } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/server";
+import { getSiteCollege } from "@/lib/site/data";
 
-export const metadata: Metadata = { title: "Recruitment" };
+export const metadata: Metadata = {
+  title: "Careers & Recruitment",
+  description: "Job openings at Al-Asar Degree College, Usterzai Payan, Kohat. Apply online for open positions.",
+  alternates: { canonical: "/recruitment" },
+};
 
 export default async function RecruitmentListPage() {
   const supabase = await createClient();
+  // Only this institution's advertisements — never another college's that
+  // happens to share the database.
+  const siteCollege = await getSiteCollege();
 
-  const { data: ads } = await supabase
-    .from("recruitment_advertisements")
-    .select("id, title, ad_number, closing_date, status, college_id")
-    .neq("status", "draft")
-    .order("closing_date", { ascending: true });
+  const { data: ads } = siteCollege
+    ? await supabase
+        .from("recruitment_advertisements")
+        .select("id, title, ad_number, closing_date, status, college_id")
+        .eq("college_id", siteCollege.id)
+        .neq("status", "draft")
+        .order("closing_date", { ascending: true })
+    : { data: [] };
 
   const collegeIds = [...new Set((ads ?? []).map((a) => a.college_id))];
   const { data: colleges } = collegeIds.length
@@ -26,12 +37,12 @@ export default async function RecruitmentListPage() {
   const otherAds = (ads ?? []).filter((a) => a.status !== "applications_open");
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
-      <section className="bg-gradient-to-r from-blue-600 to-blue-800 py-16 text-white">
+    <div className="flex min-h-screen flex-col bg-sand-50">
+      <section className="aa-lattice bg-forest-900 py-16 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h1 className="mb-4 text-white">Recruitment</h1>
-          <p className="max-w-3xl text-xl text-blue-100">
-            Current job openings across our colleges. Apply online for open positions below.
+          <h1 className="font-display mb-4 text-[2.4rem] font-medium text-sand-50 sm:text-[3rem]">Recruitment</h1>
+          <p className="max-w-3xl text-xl text-sand-200">
+            Current job openings at Al-Asar Degree College. Apply online for open positions below.
           </p>
         </div>
       </section>
@@ -40,12 +51,12 @@ export default async function RecruitmentListPage() {
         {ads && ads.length > 0 ? (
           [...openAds, ...otherAds].map((ad) => (
             <Link key={ad.id} href={`/recruitment/${ad.id}`}>
-              <Card className="transition hover:border-blue-400 hover:shadow-md">
+              <Card className="transition hover:border-sand-300 hover:shadow-md">
                 <CardContent className="flex items-center justify-between gap-4 py-5">
                   <div className="flex items-center gap-4">
-                    <Briefcase className="h-8 w-8 shrink-0 text-blue-600" />
+                    <Briefcase className="h-8 w-8 shrink-0 text-brass-700" />
                     <div>
-                      <p className="font-medium text-gray-900">{ad.title}</p>
+                      <p className="font-medium text-forest-900">{ad.title}</p>
                       <p className="text-sm text-gray-500">
                         {collegeNameById.get(ad.college_id) ?? ""}
                         {ad.ad_number && ` · Ad #${ad.ad_number}`} · Closes {new Date(ad.closing_date).toLocaleDateString()}

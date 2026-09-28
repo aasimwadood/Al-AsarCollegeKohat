@@ -68,9 +68,9 @@ export function DownloadBrowser({
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1">
                               <div className="mb-3 flex items-start gap-3">
-                                <FileText className="h-10 w-10 flex-shrink-0 text-blue-600" />
+                                <FileText className="h-10 w-10 flex-shrink-0 text-brass-700" />
                                 <div>
-                                  <h3 className="mb-1 text-gray-900">{doc.title}</h3>
+                                  <h3 className="mb-1 text-forest-900">{doc.title}</h3>
                                   <div className="flex items-center gap-3 text-sm text-gray-500">
                                     <span>{new Date(doc.uploaded_at).toLocaleDateString()}</span>
                                     {doc.sizeLabel && (

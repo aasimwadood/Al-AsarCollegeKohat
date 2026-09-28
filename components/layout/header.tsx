@@ -9,7 +9,7 @@ import { logoutAction } from "@/lib/actions/auth";
 type SearchResult = { title: string; path: string };
 
 // Multi-college public site: every in-college link below is relative to
-// `basePath` (e.g. "/college/gpgc-kohat") so navigating stays within the
+// `basePath` (e.g. "/college/<slug>") so navigating stays within the
 // current college's site rather than jumping back to a hardcoded one —
 // see docs/MIGRATION_PLAN.md §11's Part 1 plan.
 const IN_COLLEGE_PAGES: { title: string; path: string; keywords: string[] }[] = [
@@ -38,10 +38,10 @@ const GLOBAL_PAGES: { title: string; path: string; keywords: string[] }[] = [
 export function Header({
   isAuthenticated,
   basePath = "",
-  collegeName = "Government Postgraduate",
-  collegeShortName = "College Kohat",
-  collegeAbbreviation = "GPC Kohat",
-  logoPath = "/images/logo.png",
+  collegeName = "Al-Asar",
+  collegeShortName = "Degree College",
+  collegeAbbreviation = "Al-Asar",
+  logoPath = "/brand/al-asar-mark.svg",
 }: {
   isAuthenticated: boolean;
   basePath?: string;

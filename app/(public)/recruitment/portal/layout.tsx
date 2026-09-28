@@ -10,7 +10,7 @@ export default async function ApplicantPortalLayout({ children }: { children: Re
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-4">
         <div className="flex flex-wrap items-center gap-4 text-sm">
-          <Link href="/recruitment/portal" className="font-medium text-gray-900">
+          <Link href="/recruitment/portal" className="font-medium text-forest-900">
             My Applications
           </Link>
           <Link href="/recruitment/portal/profile" className="text-gray-600 hover:underline">

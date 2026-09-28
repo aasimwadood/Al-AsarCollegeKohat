@@ -49,20 +49,20 @@ export default async function ApplicantPortalHomePage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-gray-900">My Applications</h1>
+      <h1 className="text-2xl font-bold text-forest-900">My Applications</h1>
       {!applications || applications.length === 0 ? (
         <p className="py-8 text-center text-gray-500">
-          You haven&apos;t applied to anything yet. <Link href="/recruitment" className="text-blue-600 hover:underline">Browse open positions</Link>.
+          You haven&apos;t applied to anything yet. <Link href="/recruitment" className="text-brass-700 hover:underline">Browse open positions</Link>.
         </p>
       ) : (
         applications.map((app) => {
           const position = positionById.get(app.position_id);
           return (
             <Link key={app.id} href={`/recruitment/portal/applications/${app.id}`}>
-              <Card className="transition hover:border-blue-400 hover:shadow-sm">
+              <Card className="transition hover:border-sand-300 hover:shadow-sm">
                 <CardContent className="flex items-center justify-between gap-4 py-4">
                   <div>
-                    <p className="font-medium text-gray-900">{position?.title ?? "Position"}</p>
+                    <p className="font-medium text-forest-900">{position?.title ?? "Position"}</p>
                     <p className="text-sm text-gray-500">
                       {position && adById.get(position.advertisement_id)}
                       {app.application_number && ` · ${app.application_number}`}
